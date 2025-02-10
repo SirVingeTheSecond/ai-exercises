@@ -1,5 +1,23 @@
 A = 'A'
 B = 'B'
+C = 'C'
+
+RULE_ACTION = {
+    1: 'Suck',
+    2: 'Right',
+    3: 'Left',
+    4: 'NoOp',
+    5: 'Self-destruct'
+}
+rules = {
+    (A, 'Dirty'): 1,
+    (B, 'Dirty'): 1,
+    (A, 'Clean'): 2,
+    (B, 'Clean'): 3,
+    (A,B, 'Clean'): 4,
+    (B,C, 'Self-destruct'): 5
+}
+# Ex. rule (if location == A && Dirty then rule 1)
 
 Environment = {
     A: 'Dirty',
@@ -8,18 +26,21 @@ Environment = {
 }
 
 
-def REFLEX_VACUUM_AGENT(loc_st):  # Determine action
-    if loc_st[1] == 'Dirty':
-        return 'Suck'
-    if loc_st[0] == A:
-        return 'Right'
-    if loc_st[0] == B:
-        return 'Left'
-'''
-A bogus action is "allowed" (you could argue it is not alloed due to the defined dictionary ruleset) but the result of the action is not the expect rational act.
-The agent does not know any other path beside the conventional A to B by going Right and vice versa.
-It simply cannot go from A to B by going left and vice versa.
-'''
+def INTERPRET_INPUT(input):  # No interpretation
+    return input
+
+
+def RULE_MATCH(state, rules):  # Match rule for a given state
+    rule = rules.get(tuple(state))
+    return rule
+
+
+def SIMPLE_REFLEX_AGENT(percept):  # Determine action
+    state = INTERPRET_INPUT(percept)
+    rule = RULE_MATCH(state, rules)
+    action = RULE_ACTION[rule]
+    return action
+
 
 def Sensors():  # Sense Environment
     location = Environment['Current']
@@ -34,6 +55,10 @@ def Actuators(action):  # Modify Environment
         Environment['Current'] = B
     elif action == 'Left' and location == B:
         Environment['Current'] = A
+    elif action == 'NoOp':
+        Environment['Current'] = C
+    elif action == 'Self-destruct':
+        Environment['Current'] = A
 
 
 def run(n):  # run the agent through n steps
@@ -42,7 +67,7 @@ def run(n):  # run the agent through n steps
     for i in range(1, n):
         (location, status) = Sensors()  # Sense Environment before action
         print("{:12s}{:8s}".format(location, status), end='')
-        action = REFLEX_VACUUM_AGENT(Sensors())
+        action = SIMPLE_REFLEX_AGENT(Sensors())
         Actuators(action)
         (location, status) = Sensors()  # Sense Environment after action
         print("{:8s}{:12s}{:8s}".format(action, location, status))
