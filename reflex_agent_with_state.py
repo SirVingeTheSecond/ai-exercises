@@ -182,5 +182,4 @@ def run(n):
 
 
 if __name__ == '__main__':
-    # Test agent for 20 steps as required
     run(20)
