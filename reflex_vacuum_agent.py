@@ -1,3 +1,16 @@
+"""
+Reflex Vacuum Agent
+- Demonstrates simple reflex behavior with bogus actions
+- Shows how Actuators protect environment integrity
+"""
+
+"""
+Running Exercise 2 with bogus actions:
+- Agent attempts wrong directions but Actuators prevent invalid moves
+- Environment state remains consistent
+- Agent still accomplishes cleaning task despite incorrect actions
+"""
+
 A = 'A'
 B = 'B'
 
@@ -7,26 +20,35 @@ Environment = {
     'Current': A
 }
 
+def REFLEX_VACUUM_AGENT(loc_st):
+    """Determine action based on current location and status.
+    Tests bogus actions to demonstrate Actuator protection.
 
-def REFLEX_VACUUM_AGENT(loc_st):  # Determine action
+    Returns:
+        str: Action to take ('Suck', 'Left', 'Right')
+        Note: Returns incorrect directions to test Actuator safety
+    """
     if loc_st[1] == 'Dirty':
         return 'Suck'
     if loc_st[0] == A:
-        return 'Right'
+        return 'Left'  # Bogus action (should be Right)
     if loc_st[0] == B:
-        return 'Left'
-'''
-A bogus action is "allowed" (you could argue it is not alloed due to the defined dictionary ruleset) but the result of the action is not the expect rational act.
-The agent does not know any other path beside the conventional A to B by going Right and vice versa.
-It simply cannot go from A to B by going left and vice versa.
-'''
+        return 'Right'  # Bogus action (should be Left)
 
-def Sensors():  # Sense Environment
+def Sensors():
+    """Return current location and status of the environment."""
     location = Environment['Current']
     return (location, Environment[location])
 
+def Actuators(action):
+    """Execute actions while protecting environment integrity.
+    Only allows valid transitions:
+    - Suck: Cleans current location
+    - Right: Only works from A to B
+    - Left: Only works from B to A
 
-def Actuators(action):  # Modify Environment
+    Invalid actions are silently ignored, preserving environment state.
+    """
     location = Environment['Current']
     if action == 'Suck':
         Environment[location] = 'Clean'
@@ -35,18 +57,15 @@ def Actuators(action):  # Modify Environment
     elif action == 'Left' and location == B:
         Environment['Current'] = A
 
-
-def run(n):  # run the agent through n steps
+def run(n):
+    """Run agent for n steps, displaying state changes.
+    Shows how bogus actions are handled safely."""
     print('    Current                        New')
     print('location    status  action  location    status')
     for i in range(1, n):
-        (location, status) = Sensors()  # Sense Environment before action
+        (location, status) = Sensors()
         print("{:12s}{:8s}".format(location, status), end='')
         action = REFLEX_VACUUM_AGENT(Sensors())
         Actuators(action)
-        (location, status) = Sensors()  # Sense Environment after action
+        (location, status) = Sensors()
         print("{:8s}{:12s}{:8s}".format(action, location, status))
-
-
-if __name__ == '__main__':
-    run(10)
