@@ -57,7 +57,7 @@ def EXPAND(node):
 Insert node in to the queue (fringe).
 '''
 def INSERT(node, queue):
-    queue.append(0, node) # Appending the nodes to the end of the queue (FIFO) would result in Breadth-First Search.
+    queue.append(node) # Appending the nodes to the end of the queue (FIFO) would result in Breadth-First Search.
     return queue
 
 '''
