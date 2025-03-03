@@ -1,4 +1,7 @@
+from queens_fitness import *
+
 import random
+
 
 p_mutation = 0.2
 num_of_generations = 30
