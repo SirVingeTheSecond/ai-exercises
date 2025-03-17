@@ -11,30 +11,20 @@ class CSP:
         return self.recursive_backtracking({})
 
     def recursive_backtracking(self, assignment):
-        # Check if the assignment is complete
         if self.is_complete(assignment):
             return assignment
 
-        # Select an unassigned variable
         variable = self.select_unassigned_variable(assignment)
 
-        # Iterate over all possible values for the selected variable
         for value in self.order_domain_values(variable, assignment):
-            # Check if the value is consistent with the assignment
             if self.is_consistent(variable, value, assignment):
-                # Assign the value and proceed
                 assignment[variable] = value
-                # Recursive call
                 result = self.recursive_backtracking(assignment)
                 if result is not None:
                     return result
-
-                # If no solution was found, remove the variable from assignment
                 del assignment[variable]
 
-        # If no valid assignment is found, return None (backtrack)
         return None
-
 
     def select_unassigned_variable(self, assignment):
         for variable in self.variables:
@@ -49,7 +39,6 @@ class CSP:
 
     def order_domain_values(self, variable, assignment):
         all_values = self.domains[variable][:]
-        # shuffle(all_values)
         return all_values
 
     def is_consistent(self, variable, value, assignment):
@@ -66,50 +55,53 @@ class CSP:
                     return False
         return True
 
+def create_south_america_csp():
+    # List of South American countries
+    variables = [
+        'Argentina', 'Bolivia', 'Brazil', 'Chile', 'Colombia', 'Costa Rica',
+        'Ecuador', 'Guyana', 'Guyane', 'Panama', 'Paraguay', 'Peru', 'Suriname',
+        'Uruguay', 'Venezuela'
+    ]
 
-def create_australia_csp():
-    wa, q, t, v, sa, nt, nsw = 'WA', 'Q', 'T', 'V', 'SA', 'NT', 'NSW'
-    values = ['Red', 'Green', 'Blue']
-    variables = [wa, q, t, v, sa, nt, nsw]
-    domains = {
-        wa: values[:],
-        q: values[:],
-        t: values[:],
-        v: values[:],
-        sa: values[:],
-        nt: values[:],
-        nsw: values[:],
-    }
+    # Possible colors
+    values = ['Red', 'Green', 'Blue', 'Yellow']
+
+    # Assigning domains for each country
+    domains = {country: values[:] for country in variables}
+
+    # Neighbors of each country
     neighbours = {
-        wa: [sa, nt],
-        q: [sa, nt, nsw],
-        t: [],
-        v: [sa, nsw],
-        sa: [wa, nt, q, nsw, v],
-        nt: [sa, wa, q],
-        nsw: [sa, q, v],
+        'Argentina': ['Bolivia', 'Brazil', 'Chile', 'Paraguay', 'Uruguay'],
+        'Bolivia': ['Argentina', 'Brazil', 'Chile', 'Paraguay', 'Peru'],
+        'Brazil': ['Argentina', 'Bolivia', 'Colombia', 'Guyana', 'Guyane', 'Paraguay', 'Peru', 'Suriname', 'Uruguay', 'Venezuela'],
+        'Chile': ['Argentina', 'Bolivia', 'Peru'],
+        'Colombia': ['Brazil', 'Ecuador', 'Peru', 'Venezuela'],
+        'Costa Rica': ['Panama'],
+        'Ecuador': ['Colombia', 'Peru'],
+        'Guyana': ['Brazil', 'Suriname', 'Venezuela'],
+        'Guyane': ['Brazil', 'Suriname'],
+        'Panama': ['Colombia'],
+        'Paraguay': ['Argentina', 'Bolivia', 'Brazil'],
+        'Peru': ['Bolivia', 'Brazil', 'Chile', 'Colombia', 'Ecuador'],
+        'Suriname': ['Brazil', 'Guyana', 'Guyane'],
+        'Uruguay': ['Argentina', 'Brazil'],
+        'Venezuela': ['Brazil', 'Colombia', 'Guyana']
     }
 
+    # Constraint: No two neighboring countries can have the same color
     def constraint_function(first_variable, first_value, second_variable, second_value):
         return first_value != second_value
 
-    constraints = {
-        wa: constraint_function,
-        q: constraint_function,
-        t: constraint_function,
-        v: constraint_function,
-        sa: constraint_function,
-        nt: constraint_function,
-        nsw: constraint_function,
-    }
+    # Assign the constraint to every country
+    constraints = {country: constraint_function for country in variables}
 
     return CSP(variables, domains, neighbours, constraints)
 
-
 if __name__ == '__main__':
-    australia = create_australia_csp()
-    result = australia.backtracking_search()
-    for area, color in sorted(result.items()):
-        print("{}: {}".format(area, color))
-
-    # Check at https://mapchart.net/australia.html
+    south_america = create_south_america_csp()
+    result = south_america.backtracking_search()
+    if result:
+        for country, color in sorted(result.items()):
+            print(f"{country}: {color}")
+    else:
+        print("No solution found.")
