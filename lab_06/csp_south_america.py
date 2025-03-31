@@ -1,5 +1,3 @@
-from random import shuffle
-
 class CSP:
     def __init__(self, variables, domains, neighbours, constraints):
         self.variables = variables
@@ -27,36 +25,34 @@ class CSP:
         return None
 
     def select_unassigned_variable(self, assignment):
+        # Return the first country not yet assigned
         for variable in self.variables:
             if variable not in assignment:
                 return variable
 
     def is_complete(self, assignment):
+        # Check that every country is assigned
         for variable in self.variables:
             if variable not in assignment:
                 return False
         return True
 
     def order_domain_values(self, variable, assignment):
-        all_values = self.domains[variable][:]
-        return all_values
+        return self.domains[variable]
 
     def is_consistent(self, variable, value, assignment):
-        if not assignment:
-            return True
-
+        # No two adjacent countries can have the same color
         for constraint in self.constraints.values():
             for neighbour in self.neighbours[variable]:
-                if neighbour not in assignment:
-                    continue
-
-                neighbour_value = assignment[neighbour]
-                if not constraint(variable, value, neighbour, neighbour_value):
-                    return False
+                if neighbour in assignment:
+                    neighbour_value = assignment[neighbour]
+                    if not constraint(variable, value, neighbour, neighbour_value):
+                        return False
         return True
 
+
 def create_south_america_csp():
-    # List of South American countries
+    # Countries
     variables = [
         'Argentina', 'Bolivia', 'Brazil', 'Chile', 'Colombia', 'Costa Rica',
         'Ecuador', 'Guyana', 'Guyane', 'Panama', 'Paraguay', 'Peru', 'Suriname',
@@ -69,18 +65,18 @@ def create_south_america_csp():
     # Assigning domains for each country
     domains = {country: values[:] for country in variables}
 
-    # Neighbors of each country
     neighbours = {
         'Argentina': ['Bolivia', 'Brazil', 'Chile', 'Paraguay', 'Uruguay'],
         'Bolivia': ['Argentina', 'Brazil', 'Chile', 'Paraguay', 'Peru'],
-        'Brazil': ['Argentina', 'Bolivia', 'Colombia', 'Guyana', 'Guyane', 'Paraguay', 'Peru', 'Suriname', 'Uruguay', 'Venezuela'],
+        'Brazil': ['Argentina', 'Bolivia', 'Colombia', 'Guyana', 'Guyane',
+                   'Paraguay', 'Peru', 'Suriname', 'Uruguay', 'Venezuela'],
         'Chile': ['Argentina', 'Bolivia', 'Peru'],
-        'Colombia': ['Brazil', 'Ecuador', 'Peru', 'Venezuela'],
+        'Colombia': ['Brazil', 'Ecuador', 'Peru', 'Venezuela', 'Panama'],
         'Costa Rica': ['Panama'],
         'Ecuador': ['Colombia', 'Peru'],
         'Guyana': ['Brazil', 'Suriname', 'Venezuela'],
         'Guyane': ['Brazil', 'Suriname'],
-        'Panama': ['Colombia'],
+        'Panama': ['Colombia', 'Costa Rica'],
         'Paraguay': ['Argentina', 'Bolivia', 'Brazil'],
         'Peru': ['Bolivia', 'Brazil', 'Chile', 'Colombia', 'Ecuador'],
         'Suriname': ['Brazil', 'Guyana', 'Guyane'],
@@ -89,19 +85,40 @@ def create_south_america_csp():
     }
 
     # Constraint: No two neighboring countries can have the same color
-    def constraint_function(first_variable, first_value, second_variable, second_value):
-        return first_value != second_value
+    def constraint_function(first_var, first_val, second_var, second_val):
+        return first_val != second_val
 
-    # Assign the constraint to every country
+    # Every country uses the same constraint function
     constraints = {country: constraint_function for country in variables}
 
     return CSP(variables, domains, neighbours, constraints)
 
+
+def verify_solution(csp, assignment):
+    """
+    Check that no pair of adjacent countries share the same color.
+    """
+    for country in csp.variables:
+        country_color = assignment[country]
+        for neighbor in csp.neighbours[country]:
+            if assignment[neighbor] == country_color:
+                # Found a conflict
+                return False
+    return True
+
+
 if __name__ == '__main__':
     south_america = create_south_america_csp()
     result = south_america.backtracking_search()
+
     if result:
+        # Sort by name
         for country, color in sorted(result.items()):
             print(f"{country}: {color}")
+        # Double check!
+        if verify_solution(south_america, result):
+            print("\nSolution is correct (no two neighbors share the same color).")
+        else:
+            print("\nFound a conflict - solution is not correct.")
     else:
         print("No solution found.")
