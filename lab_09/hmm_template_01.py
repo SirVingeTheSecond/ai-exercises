@@ -162,8 +162,7 @@ def compute_viterbi(states, observations, transitions, emissions):
 
     # --- Termination (t = T → final) -----------------------------------------
     # Compute scores to step from each s at T to 'final'
-    final_scores = [viterbi[s, T] * transitions[s, final_state]
-                    for s in inclusive_range(1, N)]
+    final_scores = [viterbi[s, T] * transitions[s, final_state] for s in inclusive_range(1, N)]
     # Choose the best last real state
     last_state = int(np.argmax(final_scores)) + 1
 
