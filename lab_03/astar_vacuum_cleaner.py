@@ -1,164 +1,110 @@
+"""
+Lab 03 ▸ Homework — A* Vacuum Cleaner (4‑square world)
+=====================================================
+Takeaways:
+    • **A*** search ⇒ f(n)=g+h finds *optimal* (shortest‑move) plan when h is admissible.
+    • State = (location, A,B,C,D status) ⇒ |S| = 4×2⁴ = 64  (tractable graph).
+    • Heuristic = count_dirty_squares → never over‑estimates ⇒ admissible & consistent.
+    • Outputs: *path*, *total cost* (moves), *nodes expanded* — classic exam metrics.
+"""
+
 import heapq
+from typing import List, Tuple
 
-
-# -----------------------------
-# Generic A* Search
-# -----------------------------
-
+# ── generic A* scaffolding ─────────────────────────────────────────────────── #
 class Node:
-    def __init__(self, state, path, cost):
-        self.state = state  # Problem-specific state
-        self.path = path  # List of actions taken to reach this state
-        self.cost = cost  # Cost from start to this node
+    """Lightweight search tree node (keeps only what BFS/A* needs)"""
 
-    def total_cost(self, heuristic):
-        """Return f(n) = g(n) + h(n) for the node."""
-        return self.cost + heuristic(self.state)
+    __slots__ = ("state", "path", "g")
 
-    def __lt__(self, other):
-        # The comparison operator for the priority queue based on total cost.
-        return self.cost < other.cost
+    def __init__(self, state: Tuple, path: List[str], g: int):
+        self.state, self.path, self.g = state, path, g  # g ≡ path‑cost so far
+
+    # Priority queue compares on f(n)=g+h; we compute on‑the‑fly for speed
+    def __lt__(self, other: "Node"):
+        return False  # tie‑break handled by heap tuple (f,this)
 
 
-def a_star_search(start_state, goal_test, successors, cost_function, heuristic):
-    """
-    Generic A* search.
-
-    Args:
-        start_state: The initial state.
-        goal_test (function): A function that takes a state and returns True if it is a goal.
-        successors (function): A function that takes a state and returns an iterable of (action, new_state, step_cost).
-        cost_function (function): A function to update the cost given current cost and step cost (typically addition).
-        heuristic (function): A function that estimates cost from a state to the goal.
-
-    Returns:
-        (path, total_cost, nodes_expanded) if a solution is found, or (None, None, nodes_expanded) otherwise.
-    """
+def a_star_search(start_state: Tuple,
+                  goal_test,
+                  successors,
+                  heuristic) -> Tuple[List[str], int, int]:
+    """Generic A* that returns (action_path, cost, expanded_nodes)."""
     root = Node(start_state, [], 0)
-    frontier = []
-    heapq.heappush(frontier, (root.total_cost(heuristic), root))
+    frontier: List[Tuple[int, Node]] = []
+    heapq.heappush(frontier, (heuristic(start_state), root))
     explored = set()
-    nodes_expanded = 0
+    expanded = 0
 
     while frontier:
-        _, current_node = heapq.heappop(frontier)
+        f, current = heapq.heappop(frontier)
+        if current.state in explored:
+            continue  # cheaper path already processed
+        explored.add(current.state)
+        expanded += 1
 
-        # Skip states that have already been explored.
-        if current_node.state in explored:
-            continue
+        if goal_test(current.state):
+            return current.path, current.g, expanded
 
-        explored.add(current_node.state)
-        nodes_expanded += 1
+        for action, new_state, step_cost in successors(current.state):
+            if new_state in explored:
+                continue
+            g_new = current.g + step_cost
+            child = Node(new_state, current.path + [action], g_new)
+            heapq.heappush(frontier, (g_new + heuristic(new_state), child))
 
-        # Check for goal.
-        if goal_test(current_node.state):
-            return current_node.path, current_node.cost, nodes_expanded
+    return [], float("inf"), expanded  # failure (should not occur here)
 
-        for action, new_state, step_cost in successors(current_node.state):
-            new_cost = cost_function(current_node.cost, step_cost)
-            new_node = Node(new_state, current_node.path + [action], new_cost)
-            if new_state not in explored:
-                heapq.heappush(frontier, (new_node.total_cost(heuristic), new_node))
-
-    return None, None, nodes_expanded
-
-
-# -----------------------------
-# Vacuum Cleaner
-# -----------------------------
-
-# Define positions (for a linear environment; could be extended)
-POSITIONS = ['A', 'B', 'C', 'D']
+# ── Vacuum‑world domain (4 squares linear: A‑B‑C‑D) ───────────────────────── #
+POSITIONS = ["A", "B", "C", "D"]
 
 
-def vac_initial_state():
-    """
-    Return the initial state for the vacuum cleaner.
-    State is represented as a tuple:
-      (current_position, status_A, status_B, status_C, status_D)
-    All positions start as 'Dirty'.
-    """
-    return ('A', 'Dirty', 'Dirty', 'Dirty', 'Dirty')
+def vac_initial_state() -> Tuple:
+    """Start at A, all squares dirty."""
+    return ("A", "Dirty", "Dirty", "Dirty", "Dirty")
 
 
-def vac_goal_test(state):
-    """
-    The goal is reached when all positions are 'Clean'.
-    """
-    return all(status == 'Clean' for status in state[1:])
+def vac_goal_test(state: Tuple) -> bool:
+    return all(s == "Clean" for s in state[1:])
 
 
-def vac_successors(state):
-    """
-    Given a vacuum state, return an iterable of (action, new_state, cost) tuples.
-    Allowed actions:
-      - 'Suck': Clean the current square if it is dirty.
-      - 'Right': Move right if not at the rightmost position.
-      - 'Left': Move left if not at the leftmost position.
-    Every action has a cost of 1.
-    """
-    successors = []
-    current_pos = state[0]
-    pos_index = POSITIONS.index(current_pos)
-    statuses = list(state[1:])  # statuses for A, B, C, D
+def vac_successors(state: Tuple) -> List[Tuple[str, Tuple, int]]:
+    """Generate (action, new_state, cost) where cost=1 per move."""
+    loc, *statuses = state
+    idx = POSITIONS.index(loc)
+    succ = []
 
-    # Action: Suck (only if current square is Dirty)
-    if statuses[pos_index] == 'Dirty':
-        new_statuses = statuses.copy()
-        new_statuses[pos_index] = 'Clean'
-        new_state = (current_pos, *new_statuses)
-        successors.append(('Suck', new_state, 1))
+    # Suck
+    if statuses[idx] == "Dirty":
+        new_statuses = list(statuses)
+        new_statuses[idx] = "Clean"
+        succ.append(("Suck", (loc, *new_statuses), 1))
 
-    # Action: Right (if not at the rightmost position)
-    if current_pos != 'D':
-        new_pos = POSITIONS[pos_index + 1]
-        new_state = (new_pos, *statuses)
-        successors.append(('Right', new_state, 1))
+    # Move Right
+    if idx < 3:
+        succ.append(("Right", (POSITIONS[idx + 1], *statuses), 1))
 
-    # Action: Left (if not at the leftmost position)
-    if current_pos != 'A':
-        new_pos = POSITIONS[pos_index - 1]
-        new_state = (new_pos, *statuses)
-        successors.append(('Left', new_state, 1))
+    # Move Left
+    if idx > 0:
+        succ.append(("Left", (POSITIONS[idx - 1], *statuses), 1))
 
-    return successors
+    return succ
 
 
-def vac_cost_function(current_cost, step_cost):
-    """For the vacuum cleaner, the cost is just cumulative sum of moves."""
-    return current_cost + step_cost
+def vac_heuristic(state: Tuple) -> int:
+    """#Dirty squares ≤ moves needed ⇒ admissible."""
+    return sum(1 for s in state[1:] if s == "Dirty")
 
 
-def vac_heuristic(state):
-    """
-    A simple heuristic for the vacuum cleaner: count the number of dirty squares.
-    This is admissible because at minimum each dirty square requires one action (Suck).
-    """
-    return sum(1 for status in state[1:] if status == 'Dirty')
-
-
-# -----------------------------
-# Solve the Vacuum Cleaner Problem using A*
-# -----------------------------
-
-def main():
-    start = vac_initial_state()
-    path, total_cost, nodes_expanded = a_star_search(
-        start_state=start,
+# ── quick demo ─────────────────────────────────────────────────────────────── #
+if __name__ == "__main__":
+    path, cost, expanded = a_star_search(
+        start_state=vac_initial_state(),
         goal_test=vac_goal_test,
         successors=vac_successors,
-        cost_function=vac_cost_function,
-        heuristic=vac_heuristic
+        heuristic=vac_heuristic,
     )
 
-    if path is not None:
-        print("Solution found!")
-        print("Path: " + " -> ".join(path))
-        print("Total Cost:", total_cost)
-        print("Nodes Expanded:", nodes_expanded)
-    else:
-        print("No solution found.")
-
-
-if __name__ == '__main__':
-    main()
+    print("Solution path :", " -> ".join(path))
+    print("Total cost    :", cost)
+    print("Nodes expanded:", expanded)
