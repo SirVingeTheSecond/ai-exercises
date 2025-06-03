@@ -1,107 +1,70 @@
-def alpha_beta_decision(state):
-    infinity = float('inf')
+"""
+Lab 05 ▸ Utility — Generic Alpha-Beta Pruning
+====================================================
+Takeaways:
+    • `alpha_beta_search()` decouples search from game logic; games pass in
+      `successors`, `is_terminal`, and `utility` callbacks.
+    • Optional `max_depth` + `eval_fn` supports depth-limited search (heuristics).
+    • Returns `(best_action, value)` for the maximising player.  :contentReference[oaicite:4]{index=4}
+"""
 
-    def max_value(state, alpha, beta):
-        if is_terminal(state):
-            return utility_of(state)
-        v = -infinity
-        for successor in successors_of(state):
-            v = max(v, min_value(successor, alpha, beta))
-            if v >= beta:
-                return v
-            alpha = min(alpha, v)
+from typing import Any, Callable, Iterable, Tuple, Optional
+
+State      = Any
+Action     = Any
+Successors = Callable[[State], Iterable[Tuple[Action, State]]]
+Test       = Callable[[State], bool]
+Utility    = Callable[[State], int]
+Heuristic  = Optional[Callable[[State], int]]
+
+
+def alpha_beta_search(
+    state: State,
+    successors: Successors,
+    is_terminal: Test,
+    utility: Utility,
+    *,
+    max_depth: int | None = None,
+    eval_fn: Heuristic = None,
+    maximizing_player: bool = True,
+) -> Tuple[Action, int]:
+    """Return optimal action & value for the *maximising* player."""
+
+    def max_value(s: State, α: float, β: float, depth: int) -> float:
+        if is_terminal(s):
+            return utility(s)
+        if max_depth is not None and depth >= max_depth:
+            return (eval_fn or utility)(s)
+        v = float("-inf")
+        for _, child in successors(s):
+            v = max(v, min_value(child, α, β, depth + 1))
+            if v >= β:
+                return v            # β-cut
+            α = max(α, v)
         return v
 
-    def min_value(state, alpha, beta):
-        if is_terminal(state):
-            return utility_of(state)
-        v = infinity
-
-        for successor in successors_of(state):
-            v = min(v, max_value(successor, alpha, beta))
-            if v <= alpha:
-                return v
-            beta = max(beta, v)
+    def min_value(s: State, α: float, β: float, depth: int) -> float:
+        if is_terminal(s):
+            return utility(s)
+        if max_depth is not None and depth >= max_depth:
+            return (eval_fn or utility)(s)
+        v = float("inf")
+        for _, child in successors(s):
+            v = min(v, max_value(child, α, β, depth + 1))
+            if v <= α:
+                return v            # α-cut
+            β = min(β, v)
         return v
 
-    state = argmax(
-        successors_of(state),
-        lambda a: min_value(a, infinity, -infinity)
-    )
-    return state
+    best_action: Action | None = None
+    best_val    = float("-inf") if maximizing_player else float("inf")
 
+    for a, child in successors(state):
+        val = min_value(child, float("-inf"), float("inf"), 1) \
+              if maximizing_player else \
+              max_value(child, float("-inf"), float("inf"), 1)
+        if maximizing_player and val > best_val or \
+           not maximizing_player and val < best_val:
+            best_val, best_action = val, a
 
-def is_terminal(state):
-    pass
-
-
-def utility_of(state):
-    pass
-
-
-def successors_of(state):
-    pass
-
-
-def argmax(iterable, func):
-    return max(iterable, key=func)
-
-
-def computer_select_pile(state):
-    new_state = alpha_beta_decision(state)
-    return new_state
-
-
-def user_select_pile(list_of_piles):
-    '''
-    Given a list of piles, asks the user to select a pile and then a split.
-    Then returns the new list of piles.
-    '''
-    print("\n    Current piles: {}".format(list_of_piles))
-
-    i = -1
-    while i < 0 or i >= len(list_of_piles) or list_of_piles[i] < 3:
-        print("Which pile (from 1 to {}, must be > 2)?".format(len(list_of_piles)))
-        i = -1 + int(input())
-
-    print("Selected pile {}".format(list_of_piles[i]))
-
-    max_split = list_of_piles[i] - 1
-
-    j = 0
-    while j < 1 or j > max_split or j == list_of_piles[i] - j:
-        if list_of_piles[i] % 2 == 0:
-            print(
-                'How much is the first split (from 1 to {}, but not {})?'.format(
-                    max_split,
-                    list_of_piles[i] // 2
-                )
-            )
-        else:
-            print(
-                'How much is the first split (from 1 to {})?'.format(max_split)
-            )
-        j = int(input())
-
-    k = list_of_piles[i] - j
-
-    new_list_of_piles = list_of_piles[:i] + [j, k] + list_of_piles[i + 1:]
-
-    print("    New piles: {}".format(new_list_of_piles))
-
-    return new_list_of_piles
-
-
-def main():
-    state = [7]
-
-    while not is_terminal(state):
-        state = user_select_pile(state)
-        if not is_terminal(state):
-            state = computer_select_pile(state)
-
-    print("    Final state is {}".format(state))
-
-
-if __name__ == '__main__':
-    main()
+    return best_action, best_val

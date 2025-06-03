@@ -1,65 +1,51 @@
-from lab_05.nim_game_minimax import nim_is_terminal, nim_successors, nim_utility
+"""
+Lab 05 ▸ Exercise 3 — Alpha-Beta Pruning for Nim (engine-based)
+==============================================================
+"""
 
+from nim_game_minimax import (           # helpers already exported  :contentReference[oaicite:5]{index=5}
+    nim_is_terminal,
+    nim_successors,
+    nim_utility,
+    START_STONES, MAX_REMOVE,
+)
+from alpha_beta import alpha_beta_search
 
-def alpha_beta_decision_nim(state):
-    """Selects the best move using alpha–beta pruning for Nim."""
-    infinity = float('inf')
+# ---------------------------------------------------------------------------
 
-    def max_value(state, alpha, beta):
-        if nim_is_terminal(state):
-            return nim_utility(state)
-        v = -infinity
-        for (move, succ) in nim_successors(state):
-            v = max(v, min_value(succ, alpha, beta))
-            if v >= beta:
-                return v
-            alpha = max(alpha, v)
-        return v
-
-    def min_value(state, alpha, beta):
-        if nim_is_terminal(state):
-            return nim_utility(state)
-        v = infinity
-        for (move, succ) in nim_successors(state):
-            v = min(v, max_value(succ, alpha, beta))
-            if v <= alpha:
-                return v
-            beta = min(beta, v)
-        return v
-
-    best_move, best_state = max(
-        nim_successors(state),
-        key=lambda m: min_value(m[1], -infinity, infinity)
+def best_action(heap: int) -> int:
+    """Optimal stones to remove for MAX."""
+    action, _ = alpha_beta_search(
+        heap,
+        successors=nim_successors,
+        is_terminal=nim_is_terminal,
+        utility=nim_utility
     )
-    return best_move, best_state
+    return action
 
-def nim_game_alpha_beta():
-    # Start with 20 tokens and MIN to move first.
-    state = ([20], "MIN")
-    while not nim_is_terminal(state):
-        piles, player = state
-        print("\nCurrent piles:", piles)
-        if player == "MIN":
-            # Human move.
-            moves = nim_successors(state)
-            print("Legal moves:")
-            for index, (move, new_state) in enumerate(moves):
-                print(f"{index}: Split pile {move[0]} into {move[1]} and {move[2]}")
-            try:
-                choice = int(input("Your move (enter move number): "))
-                move, state = moves[choice]
-            except (ValueError, IndexError):
-                print("Invalid input. Try again.")
-                continue
+# ---------------------------------------------------------------------------
+#  Play loop (human = MIN) ---------------------------------------------------
+# ---------------------------------------------------------------------------
+def play(heap: int = START_STONES, k: int = MAX_REMOVE):
+    max_turn = True
+    while not nim_is_terminal(heap):
+        print(f"\nStones left: {heap}")
+        if max_turn:
+            take = best_action(heap)
+            print(f"MAX removes {take}.")
         else:
-            move, state = alpha_beta_decision_nim(state)
-            print(f"Computer splits pile {move[0]} into {move[1]} and {move[2]}.")
-    print("\nFinal piles:", state[0])
-    result = nim_utility(state)
-    if result == 1:
-        print("MAX wins!")
-    else:
-        print("MIN wins!")
+            while True:
+                try:
+                    take = int(input(f"Your move 1-{min(k, heap)}: "))
+                    if 1 <= take <= min(k, heap):
+                        break
+                except ValueError:
+                    pass
+            print(f"MIN removes {take}.")
+        heap -= take
+        max_turn = not max_turn
+    print("\nMAX wins!" if not max_turn else "\nYou win!")
 
-# Uncomment the next line to play the Nim game with alpha–beta pruning:
-# nim_game_alpha_beta()
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+    play()

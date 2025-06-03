@@ -1,108 +1,121 @@
-# ----------------------------
-# Nim Game using Minimax
-# ----------------------------
+"""
+Lab 05 ▸ Exercise 2 — Minimax for Nim (single-heap variant)
+==========================================================
+Takeaways:
+    • *Game state* = single integer `n` ⇒ #stones remaining (0 = terminal).
+    • Legal actions: remove 1…k stones (here k = 3) — illustrates branching factor.
+    • **Minimax** explores complete game tree; utility = +1 if MAX wins, −1 if MIN wins.
 
-def nim_is_terminal(state):
-    """A Nim state is terminal if no pile has 3 or more tokens."""
-    piles, player = state
-    return all(pile < 3 for pile in piles)
+Run: you (MIN) play against perfect MAX.
+"""
 
-def nim_utility(state):
+from functools import lru_cache
+
+# ---------------------------------------------------------------------------
+#  Parameters
+# ---------------------------------------------------------------------------
+MAX_REMOVE   = 3    # max stones removable per turn
+START_STONES = 15
+
+# ---------------------------------------------------------------------------
+# 1. TERMINAL TEST
+# ---------------------------------------------------------------------------
+def is_terminal(n: int) -> bool:
+    """True iff no stones remain."""
+    return n == 0
+
+# ---------------------------------------------------------------------------
+# 2. UTILITY FUNCTION
+# ---------------------------------------------------------------------------
+def utility_of(n: int, player_max: bool = True) -> int:
     """
-    In a terminal state, the current player cannot move and loses.
-    Return +1 if MAX wins and -1 if MIN wins.
+    Return +1 if MAX wins, −1 if MIN wins.
+    Only called on *terminal* positions (n == 0).
     """
-    piles, player = state
-    if nim_is_terminal(state):
-        # If it's MAX's turn and no move exists, MAX loses.
-        if player == "MAX":
-            return -1
+    # If it is MAX’s turn and the pile is empty, MAX has *lost* (−1).
+    return -1 if player_max else 1
+
+# ---------------------------------------------------------------------------
+# 3. SUCCESSOR GENERATOR
+# ---------------------------------------------------------------------------
+def successors_of(n: int) -> list[int]:
+    """List of legal next #stones after removing 1…k."""
+    return [n - r for r in range(1, min(MAX_REMOVE, n) + 1)]
+
+# ---------------------------------------------------------------------------
+#  Minimax with memoisation ---------------------------------------------------
+@lru_cache(maxsize=None)
+def max_value(n: int) -> int:
+    if is_terminal(n):
+        return utility_of(n, player_max=True)
+    v = -float("inf")
+    for child in successors_of(n):
+        v = max(v, min_value(child))
+    return v
+
+@lru_cache(maxsize=None)
+def min_value(n: int) -> int:
+    if is_terminal(n):
+        return utility_of(n, player_max=False)
+    v = float("inf")
+    for child in successors_of(n):
+        v = min(v, max_value(child))
+    return v
+
+def best_move(n: int) -> int:
+    """Return stones to remove (1…k) that maximises MAX utility."""
+    moves = {r: min_value(n - r) for r in range(1, min(MAX_REMOVE, n) + 1)}
+    # Choose largest utility, tie-break with smallest r (faster win)
+    return max(moves, key=lambda r: moves[r])
+
+# ---------------------------------------------------------------------------
+#  Interactive game (human = MIN) -------------------------------------------
+# ---------------------------------------------------------------------------
+def human_move(n: int) -> int:
+    while True:
+        try:
+            r = int(input(f"You remove 1-{min(MAX_REMOVE, n)} stones: "))
+            if 1 <= r <= min(MAX_REMOVE, n):
+                return r
+        except ValueError:
+            pass
+        print("Invalid move.")
+
+def main():
+    n = START_STONES
+    player_max_turn = True   # MAX starts
+    while not is_terminal(n):
+        print(f"\nStones left: {n}")
+        if player_max_turn:
+            r = best_move(n)
+            print(f"MAX removes {r} stone(s).")
         else:
-            return 1
-    return 0
+            r = human_move(n)
+        n -= r
+        player_max_turn = not player_max_turn
 
-def nim_successors(state):
-    """
-    Generate all legal moves for Nim.
-    For each pile that can be split (pile >= 3), try every split (i from 1 to pile-1)
-    where the two parts are not equal. Return a list of (move, new_state) tuples.
-    A move is represented as (index, part1, part2), where index is the position
-    of the chosen pile.
-    """
-    piles, player = state
-    successors = []
-    for idx, pile in enumerate(piles):
-        if pile >= 3:
-            for i in range(1, pile):
-                j = pile - i
-                if i != j:  # split must produce piles of different sizes
-                    # Remove the chosen pile and add the two new piles.
-                    new_piles = piles[:idx] + piles[idx+1:] + [i, j]
-                    new_piles.sort()  # sort to keep state canonical
-                    # Switch turn.
-                    next_player = "MAX" if player == "MIN" else "MIN"
-                    new_state = (new_piles, next_player)
-                    move = (idx, i, j)
-                    successors.append((move, new_state))
-    return successors
-
-# We can now re-use the minmax_decision function from our tic-tac-toe code.
-def argmax(iterable, func):
-    return max(iterable, key=func)
-
-def nim_minmax_decision(state):
-    """Selects the best move for the current state using minimax search."""
-    infinity = float('inf')
-
-    def max_value(state):
-        if nim_is_terminal(state):
-            return nim_utility(state)
-        v = -infinity
-        for (move, succ) in nim_successors(state):
-            v = max(v, min_value(succ))
-        return v
-
-    def min_value(state):
-        if nim_is_terminal(state):
-            return nim_utility(state)
-        v = infinity
-        for (move, succ) in nim_successors(state):
-            v = min(v, max_value(succ))
-        return v
-
-    best_move, best_state = argmax(nim_successors(state), lambda m: min_value(m[1]))
-    return best_move, best_state
-
-# A simple interactive game loop for Nim using minimax:
-def nim_game_minmax():
-    # Start with 15 tokens and MIN to move first.
-    state = ([15], "MIN")
-    while not nim_is_terminal(state):
-        piles, player = state
-        print("\nCurrent piles:", piles)
-        if player == "MIN":
-            # Human move: show legal moves and prompt for input.
-            moves = nim_successors(state)
-            print("Legal moves:")
-            for index, (move, new_state) in enumerate(moves):
-                print(f"{index}: Split pile {move[0]} into {move[1]} and {move[2]}")
-            try:
-                choice = int(input("Your move (enter move number): "))
-                move, state = moves[choice]
-            except (ValueError, IndexError):
-                print("Invalid input. Try again.")
-                continue
-        else:
-            # Computer (MAX) uses minimax to select a move.
-            move, state = nim_minmax_decision(state)
-            print(f"Computer splits pile {move[0]} into {move[1]} and {move[2]}.")
-    # Game is over.
-    print("\nFinal piles:", state[0])
-    result = nim_utility(state)
-    if result == 1:
-        print("MAX wins!")
+    if player_max_turn:   # loop flipped after last move
+        print("\nYou (MIN) win!")
     else:
-        print("MIN wins!")
+        print("\nMAX wins!")
 
-# Uncomment the next line to play the Nim game with minimax:
-# nim_game_minmax()
+# ---------------------------------------------------------------------------
+#  For nim_game_alphabeta.py
+# ---------------------------------------------------------------------------
+nim_is_terminal = is_terminal
+
+def nim_successors(n: int) -> list[tuple[int, int]]:
+    """
+    Return list of (removed, new_heap) pairs for alpha-beta to iterate.
+    """
+    return [(r, n - r) for r in range(1, min(MAX_REMOVE, n) + 1)]
+
+def nim_utility(n: int) -> int:
+    """
+    Utility for a *terminal* node from MAX’s perspective.
+    """
+    return utility_of(n, player_max=True)
+
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+    main()
