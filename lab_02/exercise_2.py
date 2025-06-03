@@ -2,9 +2,9 @@
 Lab 02 ▸ Exercise 2 — Vacuum-World via Breadth-First Search
 ==========================================================
 Takeaways:
-    • State = (location, A-status, B-status)  → captures **everything** BFS needs
+    • State = (location, A-status, B-status) -> captures **everything** BFS needs
     • Breadth-First Search ⇒ guarantees **shortest action sequence** (optimal cost = #moves)
-    • Explored-set prevents revisiting states |V| ≤ 8  (2 locs × 2² dirt configs)
+    • Explored-set prevents revisiting states |V| ≤ 8  (2 locs × 2^2 dirt configs)
     • Successor fn embodies env. physics:  Suck / Move / NoOp   (exam favourite)
 """
 
@@ -53,7 +53,7 @@ def TREE_SEARCH():
     step = 0
     while fringe:
         node = REMOVE_FIRST(fringe)
-        print(f"Step {step:>2} | expand {node} | fringe → {fringe}"); step += 1
+        print(f"Step {step:>2} | expand {node} | fringe -> {fringe}"); step += 1
         if node.STATE == GOAL_STATE: return node.path()
         if node.STATE not in explored:
             explored.add(node.STATE)
@@ -63,4 +63,4 @@ def TREE_SEARCH():
 # --- demo ------------------------------------------------------------------- #
 if __name__ == '__main__':
     sol = TREE_SEARCH()
-    print("\nSolution path:", ' → '.join(str(n.STATE) for n in sol))
+    print("\nSolution path:", ' -> '.join(str(n.STATE) for n in sol))

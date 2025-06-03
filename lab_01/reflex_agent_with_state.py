@@ -1,9 +1,9 @@
 """
-Homework 2 ▸ 4‑Square Reflex Agent with State
+Homework 2 ▸ 4‑Square Reflex Agent with State
 =============================================
 Takeaways:
     • *Model‑based reflex* ⇒ keeps **internal state** based on percept history
-    • Needs a **world model** (how env. evolves + effect of actions) → handles partial observability
+    • Needs a **world model** (how env. evolves + effect of actions) -> handles partial observability
     • Memory cost grows with |locations| (O(n) here) – still lightweight vs. table‑driven O(b^T)
     • Emits **NoOp** once model believes *all four squares are clean* (goal reached)
 """
@@ -26,7 +26,7 @@ model = {A: None, B: None, C: None, D: None}  # tracks perceived cleanliness
 state  = None     # latest abstracted state
 action = None     # previous action
 
-# ── rule base (condition → rule‑id) & actions  ───────────────────────────────
+# ── rule base (condition -> rule‑id) & actions  ───────────────────────────────
 RULE_ACTION = {
     1: 'Suck',     # clean current square
     2: 'Right',    # move right
@@ -73,7 +73,7 @@ def RULE_MATCH(state):
 
 
 def REFLEX_AGENT_WITH_STATE(percept):
-    """Model‑based reflex: uses UPDATE_STATE → RULE_MATCH → RULE_ACTION."""
+    """Model‑based reflex: uses UPDATE_STATE -> RULE_MATCH -> RULE_ACTION."""
     global state, action
     state  = UPDATE_STATE(state, action, percept)
     rule   = RULE_MATCH(state)
@@ -116,4 +116,4 @@ def run(steps: int = 20):
 
 # ── demo ─────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    run(20)  # ► expected: clean all squares then enter NoOp idle state
+    run(20)  # expected: clean all squares then enter NoOp idle state

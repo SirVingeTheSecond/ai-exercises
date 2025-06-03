@@ -78,7 +78,7 @@ def TREE_SEARCH():
     step = 0
     while fringe:
         node = REMOVE_FIRST(fringe)
-        print(f"Step {step:>2} | expand {node} | fringe → {fringe}")
+        print(f"Step {step:>2} | expand {node} | fringe -> {fringe}")
         step += 1
         if node.STATE == GOAL_STATE:
             return node.path()
@@ -88,4 +88,4 @@ def TREE_SEARCH():
 # -------- demo --------------------------------------------------------------
 if __name__ == '__main__':
     path = TREE_SEARCH()
-    print("\nSolution path:", ' → '.join(n.STATE for n in path))
+    print("\nSolution path:", ' -> '.join(n.STATE for n in path))

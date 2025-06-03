@@ -1,5 +1,5 @@
 """
-Lab 05 ▸ Exercise 2 — Minimax for Nim (single-heap variant)
+Lab 05 ▸ Exercise 2 — Minimax for Nim (single-heap)
 ==========================================================
 Takeaways:
     • *Game state* = single integer `n` ⇒ #stones remaining (0 = terminal).

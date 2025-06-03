@@ -6,12 +6,11 @@ Lab-01 ▸ Exercise 1  ▸ Table-Driven Vacuum Agent
   – Q3: 4 table entries if *only* current percept is used      (2 locations × 2 statuses)
   – Q4: 4**T entries for an agent lifetime of T time-steps     (branching factor = 4)
 
-
-  - Table-driven agent ⇒ space = O(b^T) → impractical beyond tiny T.
+  - Table-driven agent ⇒ space = O(b^T) -> impractical beyond tiny T.
 
   - Branching factor here is 4 (A/B × Clean/Dirty).
 
-  - Missing entry ⇒ agent returns None (shows table incompleteness).
+  - Missing entry ⇒ agent returns None (shows table is incomplete).
 """
 
 # --- constants --------------------------------------------------------------- #
@@ -27,7 +26,7 @@ table = {
     ((A, 'Dirty'),): 'Suck',
     ((B, 'Clean'),): 'Left',
     ((B, 'Dirty'),): 'Suck',
-    # Only a handful of longer histories included → lookup will fail later
+    # Only a handful of longer histories included -> lookup will fail later
     ((A, 'Clean'), (A, 'Dirty')): 'Suck',
     ((A, 'Clean'), (A, 'Dirty'), (B, 'Clean')): 'Left',
 }
@@ -63,9 +62,9 @@ def run_demo():
           "  <-- None because 4-length history missing")
 
     # Q3 & Q4 numeric answers
-    print("\nQ3 → entries if only current percept used:\t", min_entries_single_percept())
+    print("\nQ3 -> entries if only current percept used:\t", min_entries_single_percept())
     T = 4
-    print(f"Q4 → entries for agent-lifetime T={T} steps:\t", entries_for_T_steps(T),
+    print(f"Q4 -> entries for agent-lifetime T={T} steps:\t", entries_for_T_steps(T),
           "(general formula 4**T)")
 
 # --------------------------------------------------------------------------- #

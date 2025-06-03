@@ -2,7 +2,7 @@
 Lab 02 ▸ Homework — Farmer, Wolf, Goat & Cabbage (BFS)
 ======================================================
 Takeaways:
-    • State = (Farmer, Wolf, Goat, Cabbage)  each ∈ {W,E}  → 2⁴ = 16 combos
+    • State = (Farmer, Wolf, Goat, Cabbage)  each ∈ {W,E}  -> 2^4 = 16 combos
     • Breadth-First Search guarantees **minimum crossings**
     • `is_valid()` encodes safety constraints; successor_fn filters invalid moves
     • Classic river-crossing shows **search + constraint checking** pattern
@@ -65,4 +65,4 @@ def TREE_SEARCH():
 if __name__ == "__main__":
     path = TREE_SEARCH()
     print("Solution path:\n",
-          " → ".join(str(n.STATE) for n in path) if path else "No solution")
+          " -> ".join(str(n.STATE) for n in path) if path else "No solution")

@@ -1,8 +1,8 @@
 """
-Lab 06 ▸ Exercise 1 — Generic Backtracking CSP Solver
+Lab 06 ▸ Exercise 1 — Backtracking CSP Solver
 =====================================================
 Takeaways:
-    • Recursive-Backtracking (RT Fig 6-5)  → DFS in assignment space.
+    • Recursive-Backtracking (RT Fig 6-5)  -> DFS in assignment space.
     • **MRV** picks the variable with the fewest remaining values.
     • **LCV** orders values least-constraining-first.
     • Optional **Forward-Checking** & **AC-3** (switches for Challenge).
@@ -154,7 +154,7 @@ def create_australia_csp() -> CSP:
     }
     return CSP(states, domains, neighbours, adj_constraint)
 
-# Self-test: solve Australia CSP when run directly -------------------------- #
+# Test: solve Australia CSP when run directly -------------------------- #
 if __name__ == "__main__":
     csp = create_australia_csp()
     sol = csp.backtracking_search(forward_check=False, use_ac3=False)

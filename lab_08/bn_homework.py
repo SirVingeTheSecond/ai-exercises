@@ -21,7 +21,7 @@ P_V = {
     ("false",): (0.1, 0.9),
 }
 P_SMS = {
-    ("true", "true"):  (0.95, 0.05),   # DT=T, EM=T  ← 0.95 per PDF
+    ("true", "true"):  (0.95, 0.05),   # DT=T, EM=T <- 0.95 per PDF
     ("true", "false"): (0.60, 0.40),
     ("false","true"):  (0.30, 0.70),
     ("false","false"): (0.70, 0.30),

@@ -1,7 +1,7 @@
 """
 Lab 09 ▸ Homework — HMM Forward & Viterbi Results
 ================================================
-Imports algorithms from `hmm_template_01.py` and prints
+Imports from `hmm_template_01.py` and prints
 P(O|λ) plus best hidden path for each observation sequence.
 """
 
@@ -19,4 +19,4 @@ for label, obs in sequences.items():
     path = compute_viterbi(obs)
     print(f"{label}:")
     print(f"  P(O|λ)   = {prob:.6e}")
-    print(f"  Viterbi  = {' → '.join(path)}\n")
+    print(f"  Viterbi  = {' -> '.join(path)}\n")

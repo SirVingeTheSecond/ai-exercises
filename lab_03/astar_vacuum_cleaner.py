@@ -1,10 +1,10 @@
 """
-Lab 03 ▸ Homework — A* Vacuum Cleaner (4‑square world)
+Lab 03 ▸ Homework — A* Vacuum Cleaner (4‑square)
 =====================================================
 Takeaways:
     • **A*** search ⇒ f(n)=g+h finds *optimal* (shortest‑move) plan when h is admissible.
     • State = (location, A,B,C,D status) ⇒ |S| = 4×2⁴ = 64  (tractable graph).
-    • Heuristic = count_dirty_squares → never over‑estimates ⇒ admissible & consistent.
+    • Heuristic = count_dirty_squares -> never over‑estimates ⇒ admissible & consistent.
     • Outputs: *path*, *total cost* (moves), *nodes expanded* — classic exam metrics.
 """
 

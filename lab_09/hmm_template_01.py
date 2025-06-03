@@ -4,7 +4,7 @@ Lab 09 ▸ HMM  ▸ Forward & Viterbi Algorithms
 Takeaways:
     • Forward  ⇒  α_t(j) = [Σ_i α_{t-1}(i)·a_{ij}] · b_j(o_t)  ⟹  P(O|λ)
     • Viterbi ⇒  δ_t(j) = max_i δ_{t-1}(i)·a_{ij} · b_j(o_t)   ⟹  arg max Q
-    • Transition matrix a   (Fig. on p 3)  and emission matrix b (boxes B₁,B₂).
+    • Transition matrix a   (Fig. on p 3)  and emission matrix b (boxes B_1,B_2).
     • States index: 0=initial, 1=HOT, 2=COLD, 3=final.
 """
 
@@ -91,4 +91,4 @@ if __name__ == "__main__":
         s = ' '.join(map(str, obs[1:]))
         p = compute_forward(obs)
         v = compute_viterbi(obs)
-        print(f"O = {s}\n  P(O|λ)   = {p:.6e}\n  Viterbi  = {' → '.join(v)}\n")
+        print(f"O = {s}\n  P(O|λ)   = {p:.6e}\n  Viterbi  = {' -> '.join(v)}\n")

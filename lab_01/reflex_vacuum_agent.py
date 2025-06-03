@@ -3,7 +3,7 @@ Exercise 2 ▸ Simple Reflex Vacuum Agent  (2-square world)
 
 ▶  Takeaways:
     • Simple-reflex agent ⇒ chooses action from *current* percept only (O(1) memory)
-    • Actuator layer is a safety filter; world updates **only** for valid actions
+    • Actuator layer is a like safety filter; world updates **only** for valid actions
     • Bogus / unknown actions are ignored ⇒ environment cannot be corrupted
 """
 
@@ -17,7 +17,7 @@ Environment = {A: 'Dirty',
                'Current': A}  # agent starts on A (change freely for tests)
 
 # toggle to inject bogus behaviour required by step-3 -------------------------- #
-BOGUS = True  # False → correct rules,  True → deliberately wrong moves
+BOGUS = True  # False -> correct rules,  True -> deliberately wrong moves
 
 # ── agent definition ────────────────────────────────────────────────────────── #
 def REFLEX_VACUUM_AGENT(loc_st):
@@ -50,8 +50,8 @@ def Actuators(action):
     Update world ONLY for valid actions – guards against bogus agent output.
     Valid transitions:
         • Suck  – clean current square
-        • Right – move A → B
-        • Left  – move B → A
+        • Right – move A -> B
+        • Left  – move B -> A
     """
     if action not in VALID_ACTIONS:
         return                           # ignore nonsense actions

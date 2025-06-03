@@ -3,10 +3,9 @@ Exercise 3 ▸ Simple Reflex Agent (dictionary rules)
 
 Takeaways
 -------------------------------------------------
-• *Simple‑reflex* ⇒ decision uses **current percept only** → O(1) memory
+• *Simple‑reflex* ⇒ decision uses **current percept only** -> O(1) memory
 • Condition‑action **rules table** replaces huge percept table
-• Actuator layer = **safety filter** → ignores illegal / bogus actions
-• Demonstrates that an *untrusted* agent cannot corrupt environment
+• Actuator layer = **safety filter** -> ignores illegal / bogus actions
 """
 
 # ── world constants ───────────────────────────────────────────────────────────
@@ -21,8 +20,8 @@ Environment = {
 }
 
 # ── rule base (includes bogus mappings on purpose) ───────────────────────────
-#   rules  ▸ maps **condition**→rule‑id
-#   RULE_ACTION ▸ maps rule‑id → action
+#   rules  ▸ maps **condition**->rule‑id
+#   RULE_ACTION ▸ maps rule‑id -> action
 #   Some actions are deliberately wrong (e.g. 'Crash') for step‑3 test.
 RULE_ACTION = {
     1: 'Suck',        # correct – clean square

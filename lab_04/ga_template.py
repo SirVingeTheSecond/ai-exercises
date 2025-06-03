@@ -2,8 +2,8 @@
 Lab 04 ▸ Exercise — Genetic Algorithm (max-3-bit)
 =================================================
 Takeaways:
-    • GA loop = *Selection → Crossover → Mutation → Replacement*             # exam mantra
-    • **Fitness** = decimal value of the 3-bit string → goal is 7 (111)      # page 4 PDF
+    • GA loop = *Selection -> Crossover -> Mutation -> Replacement*
+    • **Fitness** = decimal value of the 3-bit string -> goal is 7 (111)      # page 4 PDF
     • **Roulette selection** biases toward fitter parents but keeps diversity
     • **Single-point crossover** + **bit-flip mutation** explore search space
 """
@@ -24,7 +24,7 @@ Individual = Tuple[int, ...]         # alias for readability
 # -------------------- GA primitives ---------------------------------------- #
 def fitness_function(ind: Individual) -> int:
     """Return decimal value of bit-string (admissible, monotonic)."""
-    # enumerate(reversed(..)) → least-significant bit gets 2**0
+    # enumerate(reversed(..)) -> least-significant bit gets 2**0
     return sum(bit * (2 ** idx) for idx, bit in enumerate(reversed(ind)))
 
 
@@ -39,7 +39,7 @@ def random_selection(population: Set[Individual]) -> Tuple[Individual, Individua
 
 
 def reproduce(mother: Individual, father: Individual) -> Individual:
-    """Single-point crossover → child keeps prefix of mother + suffix of father."""
+    """Single-point crossover -> child keeps prefix of mother + suffix of father."""
     cp = random.randint(1, N_BITS - 1)                   # avoid 0 & len
     return mother[:cp] + father[cp:]
 

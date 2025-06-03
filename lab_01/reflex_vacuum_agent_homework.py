@@ -2,9 +2,9 @@
 Homework 1 ▸ 4-Square Simple Reflex Vacuum Agent
 ================================================
 Takeaways:
-    • Simple-reflex ⇒ uses **current percept only** → O(1) memory
+    • Simple-reflex ⇒ uses **current percept only** -> O(1) memory
     • 4 locations (A-B-C-D linear) ⇒ branch factor still small (Left/Right/Suck)
-    • Actuator layer ≈ **gate-keeper** → ignores illegal moves, preserving model
+    • Actuator layer ≈ **gate-keeper** -> ignores illegal moves, preserving model
     • Any starting square allowed; test with run(20) for full sweep
 """
 
@@ -51,12 +51,12 @@ def Actuators(action):
     Perform *safe* world updates only; ignore actions outside VALID_ACTIONS.
     Valid transitions:
         • Suck  – cleans current square
-        • Right – A→B, B→C, C→D
-        • Left  – D→C, C→B, B→A
+        • Right – A->B, B->C, C->D
+        • Left  – D->C, C->B, B->A
     Anything else is silently discarded  ➔ integrity check.
     """
     if action not in VALID_ACTIONS:
-        return                                      # bogus → ignored
+        return                                      # bogus -> ignored
 
     loc = Environment['Current']
     if action == 'Suck':
@@ -82,4 +82,4 @@ def run(steps: int = 20):
 
 # ── self-test ────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    run(20)      # ► expected: full A→B→C→D→C→B→A sweep while cleaning
+    run(20)      # expected: full A->B->C->D->C->B->A sweep while cleaning

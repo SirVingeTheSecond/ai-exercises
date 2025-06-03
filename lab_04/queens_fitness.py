@@ -3,7 +3,6 @@ Chessboard module
 
 """
 
-
 def fitness_fn_negative(individual):
     '''
     Compute the number of conflicting pairs, negated.

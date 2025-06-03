@@ -3,9 +3,9 @@ Lab 04 ▸ Exercise 2 — Genetic Algorithm for N‑Queens (uses queens_fitness.
 ============================================================================
 Takeaways:
     • Chromosome = permutation of 0…N‑1 ⇒ **one queen per column & row** (implicit constraint).
-    • Fitness = queens_fitness.**fitness_fn_positive** (#non‑attacking pairs); `--neg` flag switches to conflict‑count.
+    • Fitness = queens_fitness.**fitness_fn_positive** (non‑attacking pairs); `--neg` flag switches to conflict‑count.
     • Operators: **Order‑1 crossover** + **swap mutation** keep permutation validity.
-    • Tournament selection + elitism + optional matplotlib board visualisation.
+    • Tournament selection + elitism + plot of the board.
     • Stores population as **list** (sequence) so `random.sample` works.
 """
 
@@ -60,7 +60,7 @@ def swap_mutate(chrom: Chromosome) -> Chromosome:
     return tuple(lst)
 
 def tournament(pop: List[Chromosome], k: int = TOUR_K) -> Chromosome:
-    """Return best of k random individuals (sequence-based so no TypeError)."""
+    """Return best of k random individuals."""
     return max(random.sample(pop, k), key=fitness)
 
 def random_chrom() -> Chromosome:

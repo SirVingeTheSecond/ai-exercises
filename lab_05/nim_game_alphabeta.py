@@ -1,5 +1,5 @@
 """
-Lab 05 ▸ Exercise 3 — Alpha-Beta Pruning for Nim (engine-based)
+Lab 05 ▸ Exercise 3 — Alpha-Beta Pruning for Nim
 ==============================================================
 """
 

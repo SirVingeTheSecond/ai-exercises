@@ -5,7 +5,7 @@ Takeaways:
     • *Game state* encoded as length‑9 list; integers ⇒ empty squares, "X" / "O" ⇒ occupied.
     • Functions required by **minimax**: `is_terminal`, `utility_of`, `successors_of`.
     • Minimax explores **full game tree** (≤9! states); DFS via recursion (see slides, p. 6‑7).  fileciteturn14file6
-    • WIN combos pre‑listed for O(1) winner test → typical exam trick.
+    • WIN combos pre‑listed for O(1) winner test -> typical exam trick.
 
 NOTE: you are MIN ("O"), computer is MAX ("X").
 """

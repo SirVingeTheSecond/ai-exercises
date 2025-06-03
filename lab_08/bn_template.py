@@ -1,8 +1,8 @@
 """
 Lab 08 ▸ Exercise — Sprinkler Bayesian Network
 =============================================
-CPTs and results match Lab 08.pdf exactly:
-    P(WetGrass=true)            ≈ 0.6471
+Results:
+    P(WetGrass=true) ≈ 0.6471
     P(Sprinkler=true | WetGrass=true) ≈ 0.4298
 """
 
