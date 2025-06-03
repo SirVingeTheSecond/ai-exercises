@@ -1,112 +1,82 @@
 """
-Extended Reflex Vacuum Agent (Homework 1)
-- Implements a vacuum cleaner agent with 4 locations
-- Uses simple reflex architecture without state
-- Demonstrates movement patterns and cleaning behavior
+Exercise 2 ▸ Simple Reflex Vacuum Agent  (2-square world)
 
-Features:
-- Four-location environment (A->B->C->D linear arrangement)
-- Local sensing (agent only knows current location status)
-- Reactive behavior based on current percepts
-- Protection against invalid actions
-- Support for any starting location
+▶  Takeaways:
+    • Simple-reflex agent ⇒ chooses action from *current* percept only (O(1) memory)
+    • Actuator layer is a safety filter; world updates **only** for valid actions
+    • Bogus / unknown actions are ignored ⇒ environment cannot be corrupted
 """
 
-A, B, C, D = 'A', 'B', 'C', 'D'
+# ── environment constants ───────────────────────────────────────────────────── #
+A, B              = 'A', 'B'                     # two locations
+VALID_ACTIONS     = {'Suck', 'Left', 'Right'}    # recognised by actuators
 
-Environment = {
-    A: 'Dirty',
-    B: 'Dirty',
-    C: 'Dirty',
-    D: 'Dirty',
-    'Current': A  # Can be modified to any starting position (A,B,C,D)
-}
+# initial world state
+Environment = {A: 'Dirty',
+               B: 'Dirty',
+               'Current': A}  # agent starts on A (change freely for tests)
 
+# toggle to inject bogus behaviour required by step-3 -------------------------- #
+BOGUS = True  # False → correct rules,  True → deliberately wrong moves
+
+# ── agent definition ────────────────────────────────────────────────────────── #
 def REFLEX_VACUUM_AGENT(loc_st):
     """
-    Determine action based on current location and status.
-
-    Args:
-        loc_st (tuple): Current (location, status) perception
-            location: One of A,B,C,D indicating current position
-            status: 'Clean' or 'Dirty' indicating square's status
-
-    Returns:
-        str: Action to take ('Suck', 'Right', 'Left')
-
-    Strategy:
-        - Clean current location if dirty
-        - Move right when at A,B,C
-        - Move left when at D
-        - Creates a systematic movement pattern: A->B->C->D->C->B->A
+    Simple reflex: if dirty ⇒ Suck else move.
+    When BOGUS=True we purposely swap Left/Right to test actuator protection.
     """
     location, status = loc_st
 
+    # rule 1 – clean current square
     if status == 'Dirty':
         return 'Suck'
 
-    # Movement logic for 4-location environment
-    if location == A:
-        return 'Right'
-    if location == B:
-        return 'Right'
-    if location == C:
-        return 'Right'
-    if location == D:
-        return 'Left'
+    # rule 2 – move according to location
+    if not BOGUS:
+        # correct behaviour
+        return 'Right' if location == A else 'Left'
+    else:
+        # bogus: intentionally wrong
+        return 'Left'  if location == A else 'Right'
 
+# ── sensor & actuator interface ─────────────────────────────────────────────── #
 def Sensors():
-    """
-    Return current location and status.
-
-    Returns:
-        tuple: (location, status) of current position
-    """
-    location = Environment['Current']
-    return (location, Environment[location])
+    """Return (location, status) – percept seen by agent."""
+    loc = Environment['Current']
+    return (loc, Environment[loc])
 
 def Actuators(action):
     """
-    Execute valid actions only, protecting environment integrity.
-
-    Args:
-        action (str): Action to perform ('Suck', 'Right', 'Left')
-
+    Update world ONLY for valid actions – guards against bogus agent output.
     Valid transitions:
-        - Suck: Cleans current location
-        - Right: A->B->C->D
-        - Left: D->C->B->A
+        • Suck  – clean current square
+        • Right – move A → B
+        • Left  – move B → A
     """
-    location = Environment['Current']
-
+    if action not in VALID_ACTIONS:
+        return                           # ignore nonsense actions
+    loc = Environment['Current']
     if action == 'Suck':
-        Environment[location] = 'Clean'
-    elif action == 'Right' and location in [A, B, C]:
-        Environment['Current'] = {'A': B, 'B': C, 'C': D}[location]
-    elif action == 'Left' and location in [B, C, D]:
-        Environment['Current'] = {'B': A, 'C': B, 'D': C}[location]
+        Environment[loc] = 'Clean'
+    elif action == 'Right' and loc == A:
+        Environment['Current'] = B
+    elif action == 'Left'  and loc == B:
+        Environment['Current'] = A
+    # any other combination is silently ignored (still a safeguard)
 
-def run(n):
-    """
-    Run agent for n steps, displaying environment state changes.
-
-    Args:
-        n (int): Number of steps to run
-
-    Output format:
-        Current location and status
-        Action taken
-        New location and status after action
-    """
+# ── simulation driver ───────────────────────────────────────────────────────── #
+def run(steps):
+    """Run agent for *steps* iterations, printing world evolution."""
     print('    Current                        New')
     print('location    status  action  location    status')
-    for i in range(1, n):
-        (location, status) = Sensors()
-        print("{:12s}{:8s}".format(location, status), end='')
-        action = REFLEX_VACUUM_AGENT(Sensors())
-        Actuators(action)
-        (location, status) = Sensors()
-        print("{:8s}{:12s}{:8s}".format(action, location, status))
+    for _ in range(steps):
+        (loc, st) = Sensors()
+        print(f'{loc:12}{st:8}', end='')
+        act = REFLEX_VACUUM_AGENT(Sensors())
+        Actuators(act)
+        (new_loc, new_st) = Sensors()
+        print(f'{act:8}{new_loc:12}{new_st:8}')
 
+# ── demo (exercise requires run(10)) ────────────────────────────────────────── #
 if __name__ == '__main__':
-    run(20)
+    run(10)

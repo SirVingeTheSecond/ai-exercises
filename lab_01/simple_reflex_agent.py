@@ -1,22 +1,35 @@
 """
-Simple Reflex Agent
-- Uses condition-action rules with dictionaries
-- Demonstrates bogus action handling through:
-  * Swapped Left/Right movements
-  * Invalid actions (Crash, Self-destruct)
-- Shows Actuator protection by only allowing valid state transitions
+Exercise 3 ▸ Simple Reflex Agent (dictionary rules)
+
+Takeaways
+-------------------------------------------------
+• *Simple‑reflex* ⇒ decision uses **current percept only** → O(1) memory
+• Condition‑action **rules table** replaces huge percept table
+• Actuator layer = **safety filter** → ignores illegal / bogus actions
+• Demonstrates that an *untrusted* agent cannot corrupt environment
 """
 
-A = 'A'
-B = 'B'
+# ── world constants ───────────────────────────────────────────────────────────
+A, B = 'A', 'B'                   # 2‑location vacuum world
+VALID_ACTIONS = {'Suck', 'Left', 'Right'}
 
-# Modified rules and actions to include bogus behaviors
+# ── environment ──────────────────────────────────────────────────────────────
+Environment = {
+    A: 'Dirty',
+    B: 'Dirty',
+    'Current': A,                # agent starts on A (change for experiments)
+}
+
+# ── rule base (includes bogus mappings on purpose) ───────────────────────────
+#   rules  ▸ maps **condition**→rule‑id
+#   RULE_ACTION ▸ maps rule‑id → action
+#   Some actions are deliberately wrong (e.g. 'Crash') for step‑3 test.
 RULE_ACTION = {
-    1: 'Suck',
-    2: 'Left',  # Bogus (should be Right)
-    3: 'Right', # Bogus (should be Left)
-    4: 'Crash', # Bogus action
-    5: 'Self-destruct' # Bogus action
+    1: 'Suck',        # correct – clean square
+    2: 'Left',        # bogus – should move Right from A
+    3: 'Right',       # bogus – should move Left  from B
+    4: 'Crash',       # invalid – not recognised by actuators
+    5: 'Self‑destruct' # invalid – not recognised by actuators
 }
 
 rules = {
@@ -24,63 +37,63 @@ rules = {
     (B, 'Dirty'): 1,
     (A, 'Clean'): 2,
     (B, 'Clean'): 3,
+    # Non‑sense composite states to trigger bogus actions below
     (A, B, 'Clean'): 4,
-    (B, B, 'Clean'): 5
+    (B, B, 'Clean'): 5,
 }
 
-Environment = {
-    A: 'Dirty',
-    B: 'Dirty',
-    'Current': A
-}
+# ── agent implementation ─────────────────────────────────────────────────────
 
-def INTERPRET_INPUT(input):
-    """Pass through input without interpretation."""
-    return input
+def INTERPRET_INPUT(percept):
+    return percept                # pass‑through (simple env.)
 
-def RULE_MATCH(state, rules):
-    """Match current state to appropriate rule."""
-    rule = rules.get(tuple(state))
-    return rule
+
+def RULE_MATCH(state):
+    """Return matching rule‑id or None (no default rule)."""
+    return rules.get(tuple(state))
+
 
 def SIMPLE_REFLEX_AGENT(percept):
-    """Determine action using condition-action rules."""
-    state = INTERPRET_INPUT(percept)
-    rule = RULE_MATCH(state, rules)
-    action = RULE_ACTION[rule]
-    return action
+    state = INTERPRET_INPUT(percept)         # ① translate percept
+    rule = RULE_MATCH(state)                 # ② pick rule
+    return RULE_ACTION.get(rule, 'NoOp')     # ③ map to action
+
+# ── sensors & actuators ──────────────────────────────────────────────────────
 
 def Sensors():
-    """Return current location and status."""
-    location = Environment['Current']
-    return (location, Environment[location])
+    loc = Environment['Current']
+    return (loc, Environment[loc])
+
 
 def Actuators(action):
-    """Execute valid actions only, protecting environment integrity.
-    Invalid actions (Crash, Self-destruct) are ignored.
-    Only allows:
-    - Suck: Cleans current location
-    - Right: A to B movement only
-    - Left: B to A movement only"""
-    location = Environment['Current']
-    if action == 'Suck':
-        Environment[location] = 'Clean'
-    elif action == 'Right' and location == A:
-        Environment['Current'] = B
-    elif action == 'Left' and location == B:
-        Environment['Current'] = A
+    """Mutate world only for *valid* actions – guards integrity."""
+    if action not in VALID_ACTIONS:
+        return                         # ignore bogus commands silently
 
-def run(n):
-    """Run agent for n steps, displaying environment state changes."""
+    loc = Environment['Current']
+    if action == 'Suck':
+        Environment[loc] = 'Clean'
+    elif action == 'Right' and loc == A:
+        Environment['Current'] = B
+    elif action == 'Left' and loc == B:
+        Environment['Current'] = A
+    # Any illegal move combination is ignored (additional safeguard)
+
+# ── simulation driver ────────────────────────────────────────────────────────
+
+def run(steps: int = 10):
+    """Run agent *steps* iterations and print trace."""
     print('    Current                        New')
     print('location    status  action  location    status')
-    for i in range(1, n):
-        (location, status) = Sensors()
-        print("{:12s}{:8s}".format(location, status), end='')
-        action = SIMPLE_REFLEX_AGENT(Sensors())
-        Actuators(action)
-        (location, status) = Sensors()
-        print("{:8s}{:12s}{:8s}".format(action, location, status))
 
+    for _ in range(steps):
+        (loc, st) = Sensors()
+        print(f'{loc:12}{st:8}', end='')
+        act = SIMPLE_REFLEX_AGENT(Sensors())  # choose action
+        Actuators(act)
+        (new_loc, new_st) = Sensors()
+        print(f'{act:8}{new_loc:12}{new_st:8}')
+
+# ── demo (exercise expects run(10)) ──────────────────────────────────────────
 if __name__ == '__main__':
     run(10)

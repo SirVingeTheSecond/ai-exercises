@@ -1,47 +1,73 @@
 """
-Table-Driven Agent Implementation
-- Demonstrates table lookup based on percept history
-- Shows exponential growth of required table entries with time steps
+Lab-01 ▸ Exercise 1  ▸ Table-Driven Vacuum Agent
+-------------------------------------------------
+• Shows how the percept-history index explodes exponentially
+• Answers:
+  – Q3: 4 table entries if *only* current percept is used      (2 locations × 2 statuses)
+  – Q4: 4**T entries for an agent lifetime of T time-steps     (branching factor = 4)
+
+
+  - Table-driven agent ⇒ space = O(b^T) → impractical beyond tiny T.
+
+  - Branching factor here is 4 (A/B × Clean/Dirty).
+
+  - Missing entry ⇒ agent returns None (shows table incompleteness).
 """
 
-A = 'A'
-B = 'B'
-percepts = []
+# --- constants --------------------------------------------------------------- #
+A, B = 'A', 'B'               # ► 2-square world (exam: deterministic env.)
 
+# --- global state ------------------------------------------------------------ #
+percepts = []                 # ► history = agent memory for table lookup
 
-'''
-This table contains limited entries for demonstration
-Full table would need 4^T entries for T time steps
-'''
+# --- finite (incomplete) action table --------------------------------------- #
+# Keys are *tuples of percepts*; values are actions.
 table = {
     ((A, 'Clean'),): 'Right',
     ((A, 'Dirty'),): 'Suck',
     ((B, 'Clean'),): 'Left',
     ((B, 'Dirty'),): 'Suck',
-    ((A, 'Clean'), (A, 'Clean')): 'Right',
+    # Only a handful of longer histories included → lookup will fail later
     ((A, 'Clean'), (A, 'Dirty')): 'Suck',
-    ((A, 'Clean'), (A, 'Clean'), (A, 'Clean')): 'Right',
-    ((A, 'Clean'), (A, 'Clean'), (A, 'Dirty')): 'Suck',
     ((A, 'Clean'), (A, 'Dirty'), (B, 'Clean')): 'Left',
 }
 
-def LOOKUP(percepts, table):
-    """Look up appropriate action for percept sequence."""
-    action = table.get(tuple(percepts))
-    return action
+# --- agent logic ------------------------------------------------------------- #
+def LOOKUP(history, tbl):
+    """Return action or None  (►None ⇒ missing entry ⇒ table must be enlarged)."""
+    return tbl.get(tuple(history))
 
 def TABLE_DRIVEN_AGENT(percept):
-    """Determine action based on table and percept history."""
-    percepts.append(percept)
-    action = LOOKUP(percepts, table)
-    return action
+    """Core algorithm from AIMA (static table + growing history)."""
+    percepts.append(percept)            # 1 ▸ accumulate history
+    return LOOKUP(percepts, table)      # 2 ▸ pick action from table
 
-def run():
-    """Run agent to demonstrate percept history and actions."""
-    print('Action\tPercepts')
-    print(TABLE_DRIVEN_AGENT((A, 'Clean')), '\t', percepts)
-    print(TABLE_DRIVEN_AGENT((A, 'Dirty')), '\t', percepts)
-    print(TABLE_DRIVEN_AGENT((B, 'Clean')), '\t', percepts)
+# --- helpers for Q3 & Q4 ----------------------------------------------------- #
+def min_entries_single_percept():
+    """For |Locations|=2, |Status|=2 ⇒ branching = 4."""
+    return 2 * 2                       # small hook: O(b) not O(b^T)
 
-if __name__ == '__main__':
-    run()
+def entries_for_T_steps(T):
+    """Exponential blow-up: branching^T with branching=4."""
+    return 4 ** T                      # exam: space complexity = b^T
+
+# --- demo run (fulfils Exercise 1 steps) ------------------------------------ #
+def run_demo():
+    print("Action\t\tPercepts")
+    print(TABLE_DRIVEN_AGENT((A, 'Clean')), "\t", percepts)
+    print(TABLE_DRIVEN_AGENT((A, 'Dirty')), "\t", percepts)
+    print(TABLE_DRIVEN_AGENT((B, 'Clean')), "\t", percepts)
+
+    # Extra call required by exercise (same percept again)
+    print(TABLE_DRIVEN_AGENT((B, 'Clean')), "\t", percepts,
+          "  <-- None because 4-length history missing")
+
+    # Q3 & Q4 numeric answers
+    print("\nQ3 → entries if only current percept used:\t", min_entries_single_percept())
+    T = 4
+    print(f"Q4 → entries for agent-lifetime T={T} steps:\t", entries_for_T_steps(T),
+          "(general formula 4**T)")
+
+# --------------------------------------------------------------------------- #
+if __name__ == "__main__":
+    run_demo()
