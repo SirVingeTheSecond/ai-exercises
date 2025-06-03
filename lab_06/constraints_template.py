@@ -1,115 +1,162 @@
-from random import shuffle
+"""
+Lab 06 ▸ Exercise 1 — Generic Backtracking CSP Solver
+=====================================================
+Takeaways:
+    • Recursive-Backtracking (RT Fig 6-5)  → DFS in assignment space.
+    • **MRV** picks the variable with the fewest remaining values.
+    • **LCV** orders values least-constraining-first.
+    • Optional **Forward-Checking** & **AC-3** (switches for Challenge).
+"""
 
+from __future__ import annotations
+from collections import deque, defaultdict
+from copy import deepcopy
+from typing import Dict, List, Callable, Tuple, Optional
+
+Var      = str
+Val      = str
+Domain   = List[Val]
+Assign   = Dict[Var, Val]
+Neighbor = Dict[Var, List[Var]]
+
+# --------------------------------------------------------------------------- #
+#  Core CSP class                                                             #
+# --------------------------------------------------------------------------- #
 class CSP:
-    def __init__(self, variables, domains, neighbours, constraints):
-        self.variables = variables
-        self.domains = domains
-        self.neighbours = neighbours
-        self.constraints = constraints
+    def __init__(
+        self,
+        variables: List[Var],
+        domains: Dict[Var, Domain],
+        neighbors: Neighbor,
+        constraint: Callable[[Var, Val, Var, Val], bool],
+    ):
+        self.V     = variables
+        self.D     = deepcopy(domains)
+        self.N     = neighbors
+        self.cons  = constraint
+        self.steps = 0  # nodes explored – for stats
 
-    def backtracking_search(self):
-        return self.recursive_backtracking({})
+    # ----- helpers --------------------------------------------------------- #
+    def is_complete(self, A: Assign) -> bool:
+        return len(A) == len(self.V)
 
-    def recursive_backtracking(self, assignment):
-        # Check if the assignment is complete
-        if self.is_complete(assignment):
-            return assignment
+    def is_consistent(self, var: Var, val: Val, A: Assign) -> bool:
+        """Binary constraints only (map-colouring)."""
+        return all(self.cons(var, val, nb, A[nb]) for nb in self.N[var] if nb in A)
 
-        # Select an unassigned variable
-        variable = self.select_unassigned_variable(assignment)
+    # ----- MRV / Degree heuristic ----------------------------------------- #
+    def select_unassigned_var(self, A: Assign) -> Var:
+        unassigned = [v for v in self.V if v not in A]
+        # MRV
+        m = min(unassigned, key=lambda v: len(self.D[v]))
+        # Tie-break with *degree* (more neighbours ⇒ harder)
+        min_size = len(self.D[m])
+        densest  = [v for v in unassigned if len(self.D[v]) == min_size]
+        return max(densest, key=lambda v: len(self.N[v]))
 
-        # Iterate over all possible values for the selected variable
-        for value in self.order_domain_values(variable, assignment):
-            # Check if the value is consistent with the assignment
-            if self.is_consistent(variable, value, assignment):
-                # Assign the value and proceed
-                assignment[variable] = value
-                # Recursive call
-                result = self.recursive_backtracking(assignment)
-                if result is not None:
-                    return result
+    # ----- LCV ------------------------------------------------------------- #
+    def order_domain_vals(self, var: Var) -> Domain:
+        def lcv_score(val):
+            return sum(
+                1
+                for nb in self.N[var]
+                for nb_val in self.D[nb]
+                if not self.cons(var, val, nb, nb_val)
+            )
+        return sorted(self.D[var], key=lcv_score)
 
-                # If no solution was found, remove the variable from assignment
-                del assignment[variable]
-
-        # If no valid assignment is found, return None (backtrack)
-        return None
-
-
-    def select_unassigned_variable(self, assignment):
-        for variable in self.variables:
-            if variable not in assignment:
-                return variable
-
-    def is_complete(self, assignment):
-        for variable in self.variables:
-            if variable not in assignment:
-                return False
-        return True
-
-    def order_domain_values(self, variable, assignment):
-        all_values = self.domains[variable][:]
-        # shuffle(all_values)
-        return all_values
-
-    def is_consistent(self, variable, value, assignment):
-        if not assignment:
-            return True
-
-        for constraint in self.constraints.values():
-            for neighbour in self.neighbours[variable]:
-                if neighbour not in assignment:
-                    continue
-
-                neighbour_value = assignment[neighbour]
-                if not constraint(variable, value, neighbour, neighbour_value):
+    # ---------------------------------------------------------------------- #
+    #  Forward-Checking & AC-3 utilities                                      #
+    # ---------------------------------------------------------------------- #
+    def forward_check(self, var: Var, val: Val, removals: List[Tuple[Var, Val]]):
+        """Prune inconsistent values from neighbours."""
+        for nb in self.N[var]:
+            if val in self.D[nb]:               # same colour -> illegal
+                self.D[nb].remove(val)
+                removals.append((nb, val))
+                if not self.D[nb]:
                     return False
         return True
 
+    def restore(self, removals: List[Tuple[Var, Val]]):
+        for v, val in removals:
+            self.D[v].append(val)
 
-def create_australia_csp():
-    wa, q, t, v, sa, nt, nsw = 'WA', 'Q', 'T', 'V', 'SA', 'NT', 'NSW'
-    values = ['Red', 'Green', 'Blue']
-    variables = [wa, q, t, v, sa, nt, nsw]
-    domains = {
-        wa: values[:],
-        q: values[:],
-        t: values[:],
-        v: values[:],
-        sa: values[:],
-        nt: values[:],
-        nsw: values[:],
-    }
+    def ac3(self) -> bool:
+        """Revise every arc until arc-consistent."""
+        queue = deque((Xi, Xj) for Xi in self.V for Xj in self.N[Xi])
+        while queue:
+            Xi, Xj = queue.popleft()
+            if self.revise(Xi, Xj):
+                if not self.D[Xi]:
+                    return False
+                for Xk in self.N[Xi]:
+                    if Xk != Xj:
+                        queue.append((Xk, Xi))
+        return True
+
+    def revise(self, Xi: Var, Xj: Var) -> bool:
+        revised = False
+        for x in self.D[Xi][:]:
+            if not any(self.cons(Xi, x, Xj, y) for y in self.D[Xj]):
+                self.D[Xi].remove(x)
+                revised = True
+        return revised
+
+    # ---------------------------------------------------------------------- #
+    #  Backtracking Search                                                   #
+    # ---------------------------------------------------------------------- #
+    def backtracking_search(self, *, forward_check=False, use_ac3=False) -> Optional[Assign]:
+        A: Assign = {}
+        domains_backup = deepcopy(self.D)  # keep original for stats
+        if use_ac3 and not self.ac3():     # Challenge: pre-process
+            return None
+        solution = self._backtrack(A, forward_check)
+        self.D = domains_backup            # restore for possible re-runs
+        return solution
+
+    def _backtrack(self, A: Assign, fc: bool) -> Optional[Assign]:
+        if self.is_complete(A):
+            return A
+        self.steps += 1
+        var = self.select_unassigned_var(A)
+        for val in self.order_domain_vals(var):
+            if self.is_consistent(var, val, A):
+                A[var] = val
+                removals: List[Tuple[Var, Val]] = []
+                domain_ok = True
+                if fc:                        # Forward-Checking
+                    domain_ok = self.forward_check(var, val, removals)
+                if domain_ok:
+                    res = self._backtrack(A, fc)
+                    if res:
+                        return res
+                # undo
+                if fc:
+                    self.restore(removals)
+                del A[var]
+        return None
+
+# --------------------------------------------------------------------------- #
+#  Map-colouring instances                                                    #
+# --------------------------------------------------------------------------- #
+def adj_constraint(X: Var, x: Val, Y: Var, y: Val) -> bool:
+    """X and Y may not share a colour if they are neighbours."""
+    return x != y
+
+def create_australia_csp() -> CSP:
+    states = ["WA", "NT", "SA", "Q", "NSW", "V", "T"]
+    colours = ["R", "G", "B"]
+    domains = {s: colours[:] for s in states}
     neighbours = {
-        wa: [sa, nt],
-        q: [sa, nt, nsw],
-        t: [],
-        v: [sa, nsw],
-        sa: [wa, nt, q, nsw, v],
-        nt: [sa, wa, q],
-        nsw: [sa, q, v],
+        "WA": ["NT", "SA"], "NT": ["WA", "SA", "Q"], "SA": ["WA", "NT", "Q", "NSW", "V"],
+        "Q": ["NT", "SA", "NSW"], "NSW": ["SA", "Q", "V"], "V": ["SA", "NSW"], "T": []
     }
+    return CSP(states, domains, neighbours, adj_constraint)
 
-    def constraint_function(first_variable, first_value, second_variable, second_value):
-        return first_value != second_value
-
-    constraints = {
-        wa: constraint_function,
-        q: constraint_function,
-        t: constraint_function,
-        v: constraint_function,
-        sa: constraint_function,
-        nt: constraint_function,
-        nsw: constraint_function,
-    }
-
-    return CSP(variables, domains, neighbours, constraints)
-
-
-if __name__ == '__main__':
-    australia = create_australia_csp()
-    result = australia.backtracking_search()
-    for area, color in sorted(result.items()):
-        print("{}: {}".format(area, color))
-
-    # Check at https://mapchart.net/australia.html
+# Self-test: solve Australia CSP when run directly -------------------------- #
+if __name__ == "__main__":
+    csp = create_australia_csp()
+    sol = csp.backtracking_search(forward_check=False, use_ac3=False)
+    print("Solution:", sol)
+    print("Nodes expanded:", csp.steps)
