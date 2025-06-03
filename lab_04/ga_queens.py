@@ -1,155 +1,126 @@
-from queens_fitness import *
-import random
+"""
+Lab 04 ▸ Exercise 2 — Genetic Algorithm for N‑Queens (uses queens_fitness.py)
+============================================================================
+Takeaways:
+    • Chromosome = permutation of 0…N‑1 ⇒ **one queen per column & row** (implicit constraint).
+    • Fitness = queens_fitness.**fitness_fn_positive** (#non‑attacking pairs); `--neg` flag switches to conflict‑count.
+    • Operators: **Order‑1 crossover** + **swap mutation** keep permutation validity.
+    • Tournament selection + elitism + optional matplotlib board visualisation.
+    • Stores population as **list** (sequence) so `random.sample` works.
+"""
 
-p_mutation = 0.2
-num_of_generations = 100
+import argparse, random, sys
+from typing import List, Tuple
+from queens_fitness import fitness_fn_positive, fitness_fn_negative  # official fitness helpers
 
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    plt = None  # fallback if matplotlib unavailable
 
-def genetic_algorithm(population, fitness_fn, minimal_fitness, n):
-    """Runs the genetic algorithm to solve the N-Queens problem."""
-    max_fitness_reached = 0
-    max_fitness_individual = None
+# ── CLI ----------------------------------------------------------------------
+parser = argparse.ArgumentParser(description="Genetic Algorithm for N‑Queens (permutation encoding)")
+parser.add_argument("N", nargs="?", type=int, default=8, help="Board size N (default 8)")
+parser.add_argument("--plot", action="store_true", help="Show matplotlib board of best solution")
+parser.add_argument("--neg", action="store_true", help="Use fitness_fn_negative instead of positive")
+args = parser.parse_args()
 
-    for generation in range(num_of_generations):
-        print("Generation {}:".format(generation))
+N: int = args.N
+POP_SIZE = 200
+MAX_GENS = 2000
+P_MUTATION = 0.3
+TOUR_K = 3
+ELITE = 2  # number of top individuals carried over each generation
 
-        # Print only the best individual to keep output manageable
-        fittest_individual = get_fittest_individual(population, fitness_fn)
-        fitness = fitness_fn(fittest_individual)
-        if fitness > max_fitness_reached:
-            max_fitness_reached = fitness
-            max_fitness_individual = fittest_individual
+MAX_FITNESS = N * (N - 1) // 2  # C(N,2) non‑attacking pairs (goal for positive fitness)
+Chromosome = Tuple[int, ...]
 
-        print("Best individual: {} - fitness: {}".format(fittest_individual, fitness))
-        print(f"Population size: {len(population)}")
+# Pick fitness function based on flag ---------------------------------------------------
+fitness = fitness_fn_negative if args.neg else fitness_fn_positive
 
-        # Create a new population with fixed size to prevent unbounded growth
-        new_population = set()
+def order_one_xover(mom: Chromosome, dad: Chromosome) -> Chromosome:
+    """Order‑1 crossover (OX1) preserves permutation semantics."""
+    a, b = sorted(random.sample(range(N), 2))
+    child = [-1] * N
+    # copy dad slice
+    child[a:b+1] = dad[a:b+1]
+    # fill remaining with mom's genes keeping order
+    fill = [gene for gene in mom if gene not in child]
+    idx = 0
+    for i in range(N):
+        if child[i] == -1:
+            child[i] = fill[idx]
+            idx += 1
+    return tuple(child)
 
-        # Select parents and create offspring
-        selection_pool = list(population)
-        # Limit population size if it gets too large
-        if len(population) > 100:  # Limit pool size to prevent excessive growth
-            selection_pool = select_top_individuals(population, fitness_fn, 100)
+def swap_mutate(chrom: Chromosome) -> Chromosome:
+    i, j = random.sample(range(N), 2)
+    lst = list(chrom)
+    lst[i], lst[j] = lst[j], lst[i]
+    return tuple(lst)
 
-        for i in range(len(selection_pool) // 2):  # Create half as many offspring pairs as parents
-            mother, father = random_selection(selection_pool, fitness_fn)
-            child1, child2 = reproduce(mother, father)
+def tournament(pop: List[Chromosome], k: int = TOUR_K) -> Chromosome:
+    """Return best of k random individuals (sequence-based so no TypeError)."""
+    return max(random.sample(pop, k), key=fitness)
 
-            if random.uniform(0, 1) < p_mutation:
-                child1 = mutate(child1, n)
-            if random.uniform(0, 1) < p_mutation:
-                child2 = mutate(child2, n)
+def random_chrom() -> Chromosome:
+    lst = list(range(N))
+    random.shuffle(lst)
+    return tuple(lst)
 
-            new_population.add(child1)
-            new_population.add(child2)
+def genetic_algorithm() -> Chromosome:
+    population: List[Chromosome] = [random_chrom() for _ in range(POP_SIZE)]
+    best = max(population, key=fitness)
 
-        # Combine old and new population, then select top individuals
-        combined_population = population.union(new_population)
-        population = select_top_individuals(combined_population, fitness_fn, 100)  # Keep population size fixed
+    for gen in range(MAX_GENS):
+        best = max(population, key=fitness)
+        best_fit = fitness(best)
+        if gen % 100 == 0 or (not args.neg and best_fit == MAX_FITNESS):
+            print(f"Gen {gen:4d} | best fitness = {best_fit}")
+        # goal check
+        if (not args.neg and best_fit == MAX_FITNESS) or (args.neg and best_fit == 0):
+            print("\nSolution found!")
+            return best
 
-        # Check if we've found a solution
-        fittest_individual = get_fittest_individual(population, fitness_fn)
-        if minimal_fitness <= fitness_fn(fittest_individual):
-            print(f"Solution found in generation {generation}!")
-            break
+        # --- next generation ------------------------------------------------
+        new_pop: List[Chromosome] = sorted(population, key=fitness, reverse=True)[:ELITE]
+        while len(new_pop) < POP_SIZE:
+            mom = tournament(population)
+            dad = tournament(population)
+            child = order_one_xover(mom, dad)
+            if random.random() < P_MUTATION:
+                child = swap_mutate(child)
+            new_pop.append(child)
+        population = new_pop
+    print("Generation limit reached; returning best‑so‑far.")
+    return max(population, key=fitness)
 
-    print("Final generation {}:".format(generation))
-    print_population(population, fitness_fn)
+# ── ASCII & plot ----------------------------------------------------
 
-    # Return the best solution found, even if it doesn't meet minimal_fitness
-    return get_fittest_individual(population, fitness_fn)
+def print_board(chrom: Chromosome):
+    for row in range(N):
+        print(" ".join('Q' if chrom[row] == col else '·' for col in range(N)))
+    print()
 
+def plot_board(chrom: Chromosome):
+    if plt is None:
+        print("matplotlib not installed; ASCII board shown instead.")
+        return
+    plt.figure(figsize=(N/2, N/2))
+    plt.title(f"{N}-Queens Solution")
+    ax = plt.gca()
+    for r in range(N):
+        for c in range(N):
+            color = 'white' if (r+c)%2==0 else 'lightgray'
+            ax.add_patch(plt.Rectangle((c, N-r-1), 1, 1, edgecolor='black', facecolor=color))
+    ax.scatter([chrom[r]+0.5 for r in range(N)], [N-r-0.5 for r in range(N)], s=250, marker='♛', color='red')
+    ax.set_xlim(0, N); ax.set_ylim(0, N); ax.set_xticks([]); ax.set_yticks([]); ax.set_aspect('equal')
+    plt.show()
 
-def select_top_individuals(population, fitness_fn, n):
-    """Select the top n individuals from the population based on fitness."""
-    sorted_population = sorted(population, key=fitness_fn, reverse=True)
-    return set(sorted_population[:n])
-
-
-def print_population(population, fitness_fn):
-    """Prints the population with their fitness values."""
-    # Only print top 10 individuals to keep output manageable
-    sorted_individuals = sorted(population, key=fitness_fn, reverse=True)
-    for individual in sorted_individuals[:10]:
-        fitness = fitness_fn(individual)
-        print("{} - fitness: {}".format(individual, fitness))
-    if len(population) > 10:
-        print(f"... and {len(population) - 10} more individuals")
-
-
-def reproduce(mother, father):
-    """Performs single-point crossover and returns two children."""
-    crossover_point = random.randint(1, len(mother) - 1)
-    child1 = mother[:crossover_point] + father[crossover_point:]
-    child2 = father[:crossover_point] + mother[crossover_point:]
-    return child1, child2
-
-
-def mutate(individual, n):
-    """Randomly changes one queen's row."""
-    idx = random.randint(0, len(individual) - 1)
-    new_row = random.randint(0, n - 1)
-    mutated = list(individual)
-    mutated[idx] = new_row
-    return tuple(mutated)
-
-
-def random_selection(population, fitness_fn):
-    """Roulette-wheel selection based on fitness."""
-    # Add 1 to all fitness values to handle case where all fitness values are 0
-    population_list = list(population)
-    fitness_values = [fitness_fn(ind) + 1 for ind in population_list]
-    total_fitness = sum(fitness_values)
-    probabilities = [fitness / total_fitness for fitness in fitness_values]
-
-    selected = random.choices(population_list, weights=probabilities, k=2)
-    return selected[0], selected[1]
-
-
-def get_fittest_individual(iterable, func):
-    """Returns the individual with the highest fitness."""
-    return max(iterable, key=func)
-
-
-def get_initial_population(n, count):
-    """Generates an initial population of N-Queens solutions."""
-    return set([
-        tuple(random.randint(0, n - 1) for _ in range(n))
-        for _ in range(count)
-    ])
-
-
-def main():
-    """Runs the genetic algorithm for the N-Queens problem."""
-    n = 8  # Number of queens
-    minimal_fitness = 28  # Maximum number of non-attacking pairs for 8 queens
-
-    initial_population = get_initial_population(n, 50)
-
-    print(f"Starting genetic algorithm for {n}-queens problem")
-    print(f"Looking for solution with fitness >= {minimal_fitness}")
-    print(f"Initial population size: {len(initial_population)}")
-
-    fittest = genetic_algorithm(initial_population, fitness_fn_positive, minimal_fitness, n)
-
-    print('Fittest Individual: ' + str(fittest))
-    print('Fitness: ' + str(fitness_fn_positive(fittest)))
-
-    # Visualize the solution
-    print("\nSolution visualization:")
-    visualize_board(fittest, n)
-
-
-def visualize_board(queens, n):
-    """Visualize the chessboard with queens."""
-    board = [['·' for _ in range(n)] for _ in range(n)]
-    for col, row in enumerate(queens):
-        board[row][col] = 'Q'
-
-    for row in board:
-        print(' '.join(row))
-
-
-if __name__ == '__main__':
-    main()
+# ── main --------------------------------------------------------------------
+if __name__ == "__main__":
+    solution = genetic_algorithm()
+    print("\nBest permutation:", solution)
+    print_board(solution)
+    if args.plot:
+        plot_board(solution)

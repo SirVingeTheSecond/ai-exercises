@@ -1,137 +1,92 @@
+"""
+Lab 04 ▸ Exercise — Genetic Algorithm (max-3-bit)
+=================================================
+Takeaways:
+    • GA loop = *Selection → Crossover → Mutation → Replacement*             # exam mantra
+    • **Fitness** = decimal value of the 3-bit string → goal is 7 (111)      # page 4 PDF
+    • **Roulette selection** biases toward fitter parents but keeps diversity
+    • **Single-point crossover** + **bit-flip mutation** explore search space
+"""
+
 import random
+from typing import List, Tuple, Set
 
-p_mutation = 0.2
-num_of_generations = 30
+# -------------------- hyper-parameters ------------------------------------- #
+N_BITS              = 3              # chromosome length
+POPULATION_SIZE     = 4              # small so trace fits on paper
+P_MUTATION          = 0.2            # bit-flip probability
+MAX_GENERATIONS     = 30             # stop-gap if optimum never found
+TARGET_FITNESS      = 7              # 3-bit maximum
 
-
-def genetic_algorithm(population, fitness_fn, minimal_fitness):
-    for generation in range(num_of_generations):
-        print("Generation {}:".format(generation))
-        print_population(population, fitness_fn)
-
-        new_population = set()
-
-        for i in range(len(population)):
-            mother, father = random_selection(population, fitness_fn)
-            child = reproduce(mother, father)
-
-            if random.uniform(0, 1) < p_mutation:
-                child = mutate(child)
-
-            new_population.add(child)
-
-        # Add new population to population, use union to disregard
-        # duplicate individuals
-        population = population.union(new_population)
-
-        fittest_individual = get_fittest_individual(population, fitness_fn)
-
-        if minimal_fitness <= fitness_fn(fittest_individual):
-            break
-
-    print("Final generation {}:".format(generation))
-    print_population(population, fitness_fn)
-
-    return fittest_individual
+Individual = Tuple[int, ...]         # alias for readability
 
 
-def print_population(population, fitness_fn):
-    for individual in population:
-        fitness = fitness_fn(individual)
-        print("{} - fitness: {}".format(individual, fitness))
+# -------------------- GA primitives ---------------------------------------- #
+def fitness_function(ind: Individual) -> int:
+    """Return decimal value of bit-string (admissible, monotonic)."""
+    # enumerate(reversed(..)) → least-significant bit gets 2**0
+    return sum(bit * (2 ** idx) for idx, bit in enumerate(reversed(ind)))
 
 
-def reproduce(mother, father):
-    '''
-    Reproduce two individuals with single-point crossover
-    Return the child individual
-    '''
+def random_selection(population: Set[Individual]) -> Tuple[Individual, Individual]:
+    """Roulette-wheel selection – probability ∝ fitness+1 (avoid zeros)."""
+    pop_list: List[Individual] = list(population)
+    fitnesses = [fitness_function(ind) + 1 for ind in pop_list]  # +1 to handle all-zero pop
+    total = sum(fitnesses)
+    probs = [f / total for f in fitnesses]
+    mother, father = random.choices(pop_list, weights=probs, k=2)
+    return mother, father
 
-    crossover_point = random.randint(0, len(mother) - 1)
-    child = mother[:crossover_point] + father[crossover_point:]
-    return child
+
+def reproduce(mother: Individual, father: Individual) -> Individual:
+    """Single-point crossover → child keeps prefix of mother + suffix of father."""
+    cp = random.randint(1, N_BITS - 1)                   # avoid 0 & len
+    return mother[:cp] + father[cp:]
 
 
-def mutate(individual):
-    '''
-    Mutate an individual by randomly assigning one of its bits
-    Return the mutated individual
-    '''
-
-    idx = random.randint(0, len(individual) - 1)
-    mutated = list(individual)
-    mutated[idx] = 1 - mutated[idx]
+def mutate(ind: Individual) -> Individual:
+    """Bit-flip one random locus (with P_MUTATION outside)."""
+    idx = random.randrange(N_BITS)
+    mutated = list(ind)
+    mutated[idx] = 1 - mutated[idx]                      # toggle 0↔1
     return tuple(mutated)
 
 
-def random_selection(population, fitness_fn):
-    """
-    Compute fitness of each in population according to fitness_fn and add up
-    the total. Then choose 2 from sequence based on percentage contribution to
-    total fitness of population
-    Return selected variable which holds two individuals that were chosen as
-    the mother and the father
-    """
+# -------------------- GA driver -------------------------------------------- #
+def genetic_algorithm(initial_pop: Set[Individual]) -> Individual:
+    population = set(initial_pop)
+    for gen in range(MAX_GENERATIONS):
+        best = max(population, key=fitness_function)
+        print(f"Gen {gen:02d}  Best {best}  Fit={fitness_function(best)}")
 
-    # Python sets are randomly ordered. Since we traverse the set twice, we
-    # want to do it in the same order. So let's convert it temporarily to a
-    # list.
-    ordered_population = list(population)
+        if fitness_function(best) >= TARGET_FITNESS:
+            print("Optimum reached!\n")
+            return best
 
-    total_fitness = sum(fitness_fn(ind) for ind in ordered_population)
-    probabilities = [fitness_fn(ind) / total_fitness for ind in ordered_population]
+        # --- produce next generation -------------------------------------- #
+        new_population: Set[Individual] = set()
+        while len(new_population) < POPULATION_SIZE:
+            mom, dad = random_selection(population)
+            child = reproduce(mom, dad)
+            if random.random() < P_MUTATION:
+                child = mutate(child)
+            new_population.add(child)
 
-    selected = random.choices(ordered_population, weights=probabilities, k = 2)
-    return selected[0], selected[1]
+        population = new_population                    # generational replacement
 
-
-def fitness_function(individual):
-    '''
-    Computes the decimal value of the individual
-    Return the fitness level of the individual
-
-    Explanation:
-    enumerate(list) returns a list of pairs (position, element):
-
-    enumerate((4, 6, 2, 8)) -> [(0, 4), (1, 6), (2, 2), (3, 8)]
-
-    enumerate(reversed((1, 1, 0))) -> [(0, 0), (1, 1), (2, 1)]
-    '''
-
-    fitness = sum(bit * (2 ** idx) for idx, bit in enumerate(reversed(individual)))
-    return fitness
+    print("Max generations hit — returning best found.\n")
+    return max(population, key=fitness_function)
 
 
-def get_fittest_individual(iterable, func):
-    return max(iterable, key=func)
+# -------------------- helper ------------------------------------------------ #
+def random_individual() -> Individual:
+    return tuple(random.randint(0, 1) for _ in range(N_BITS))
 
 
-def get_initial_population(n, count):
-    '''
-    Randomly generate count individuals of length n
-    Note since its a set it disregards duplicate elements.
-    '''
-    return set([
-        tuple(random.randint(0, 1) for _ in range(n))
-        for _ in range(count)
-    ])
-
-
-def main():
-    minimal_fitness = 7
-
-    # Curly brackets also creates a set, if there isn't a colon to indicate a dictionary
-    initial_population = {
-        (1, 1, 0),
-        (0, 0, 0),
-        (0, 1, 0),
-        (1, 0, 0)
-    }
-    #initial_population = get_initial_population(3, 4)
-
-    fittest = genetic_algorithm(initial_population, fitness_function, minimal_fitness)
-    print('Fittest Individual: ' + str(fittest))
-
-
-if __name__ == '__main__':
-    main()
+# -------------------- demo run --------------------------------------------- #
+if __name__ == "__main__":
+    seed_pop = {random_individual() for _ in range(POPULATION_SIZE)}
+    print("Initial population:", seed_pop, "\n")
+    best = genetic_algorithm(seed_pop)
+    print("Best individual :", best)
+    print("Decimal value   :", fitness_function(best))
