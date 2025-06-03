@@ -1,115 +1,91 @@
-class Node:  # Node has only PARENT_NODE, STATE, DEPTH
+"""
+Lab 02 ▸ Exercise 1 — Uninformed Search Fringe Order
+====================================================
+Takeaways:
+    • **Front‑insert ➜ LIFO ➜ Depth‑First Search**  (stack behaviour)
+    • **Rear‑insert  ➜ FIFO ➜ Breadth‑First Search** (queue behaviour)
+    • Fringe trace reveals node‑expansion order — classic exam trick.
+    • State‑space size small ⇒ manual tracing feasible.
+"""
+
+# -------- search graph (letters A‑J) ----------------------------------------
+STATE_SPACE = {
+    'A': ['B', 'C'],
+    'B': ['D', 'E'],
+    'C': ['F', 'G'],
+    'D': [], 'E': [], 'F': [],
+    'G': ['H', 'I', 'J'], 'H': [], 'I': [], 'J': []
+}
+INITIAL_STATE, GOAL_STATE = 'A', 'J'
+
+# -------- search control toggle --------------------------------------------
+STRATEGY = 'DFS'  # set to 'BFS' to switch behaviour
+
+# -------- node ----------------------------------------------------------------
+class Node:
     def __init__(self, state, parent=None, depth=0):
         self.STATE = state
         self.PARENT_NODE = parent
         self.DEPTH = depth
 
-    def path(self):  # Create a list of nodes from the root to this node.
-        current_node = self
-        path = [self]
-        while current_node.PARENT_NODE:  # while current node has parent
-            current_node = current_node.PARENT_NODE  # make parent the current node
-            path.append(current_node)   # add current node to path
-        return path
-
-    def display(self):
-        print(self)
+    def path(self):
+        n, p = self, []
+        while n:
+            p.append(n)
+            n = n.PARENT_NODE
+        return p[::-1]
 
     def __repr__(self):
-        return 'State: ' + str(self.STATE) + ' - Depth: ' + str(self.DEPTH)
+        return f"{self.STATE}"
+
+# -------- fringe management --------------------------------------------------
+
+def INSERT(node, queue):
+    """Front insert ⇒ DFS  ;  Rear insert ⇒ BFS."""
+    if STRATEGY == 'DFS':
+        queue.insert(0, node)   # LIFO stack push
+    else:
+        queue.append(node)      # FIFO enqueue
+    return queue
 
 
-'''
-Search the tree for the goal state and return path from initial state to goal state
-'''
-# Below demonstrates Depth-First Search
+def INSERT_ALL(nodes, queue):
+    """Maintain child order while delegating to INSERT."""
+    for n in nodes:
+        INSERT(n, queue)
+    return queue
+
+
+def REMOVE_FIRST(queue):
+    return queue.pop(0)         # always pop front
+
+# -------- helper ------------------------------------------------------------
+
+def successor_fn(state):
+    return STATE_SPACE[state]
+
+# -------- main algorithm ----------------------------------------------------
+
+def EXPAND(node):
+    children = []
+    for s in successor_fn(node.STATE):
+        children.append(Node(s, parent=node, depth=node.DEPTH + 1))
+    return children
+
+
 def TREE_SEARCH():
-    fringe = []
-    initial_node = Node(INITIAL_STATE)
-    fringe = INSERT(initial_node, fringe)
-    while fringe is not None:
+    fringe = INSERT(Node(INITIAL_STATE), [])
+    step = 0
+    while fringe:
         node = REMOVE_FIRST(fringe)
-        print("Expanding: ", node)
+        print(f"Step {step:>2} | expand {node} | fringe → {fringe}")
+        step += 1
         if node.STATE == GOAL_STATE:
             return node.path()
-        children = EXPAND(node)
-        fringe = INSERT_ALL(children, fringe)
-        print("fringe: {}".format(fringe))
+        fringe = INSERT_ALL(EXPAND(node), fringe)
     return None
 
-'''
-Expands node and gets the successors (children) of that node.
-Return list of the successor nodes.
-'''
-def EXPAND(node):
-    successors = []
-    children = successor_fn(node.STATE)
-    for child in children:
-        s = Node(node)  # create node for each in state list
-        s.STATE = child  # e.g. result = 'F' then 'G' from list ['F', 'G']
-        s.PARENT_NODE = node
-        s.DEPTH = node.DEPTH + 1
-        successors = INSERT(s, successors)
-    return successors
-
-
-'''
-Insert node in to the queue (fringe).
-'''
-def INSERT(node, queue):
-    queue.append(node) # Appending the nodes to the end of the queue (FIFO) would result in Breadth-First Search.
-    return queue
-
-'''
-def INSERT(node, queue):
-    queue.insert(0, node) # Depth-First Search?
-    return queue
-'''
-
-'''
-Insert list of nodes into the fringe
-'''
-def INSERT_ALL(list, queue):
-    queue.extend(list)  # Extending inserts the list at the end (FIFO).
-    return queue
-
-'''
-def INSERT_ALL(list, queue):
-    for node in list:
-        queue.insert(0, node)
-    return queue
-'''
-
-'''
-Removes and returns the first element from fringe
-'''
-def REMOVE_FIRST(queue):
-    return queue.pop(0)
-
-''''
-Successor function, mapping the nodes to its successors
-'''
-def successor_fn(state):  # Lookup list of successor states
-    return STATE_SPACE[state]  # successor_fn( 'C' ) returns ['F', 'G']
-
-
-INITIAL_STATE = 'A'
-GOAL_STATE = 'J'
-STATE_SPACE = {'A': ['B', 'C'],
-               'B': ['D', 'E'], 'C': ['F', 'G'],
-               'D': [], 'E': [], 'F': [], 'G': ['H', 'I', 'J'],
-               'H': [], 'I': [], 'J': [], }
-
-
-'''
-Run tree search and display the nodes in the path to goal node
-'''
-def run():
-    path = TREE_SEARCH()
-    print('Solution path:')
-    for node in path:
-        node.display()
-
-
+# -------- demo --------------------------------------------------------------
 if __name__ == '__main__':
-    run()
+    path = TREE_SEARCH()
+    print("\nSolution path:", ' → '.join(n.STATE for n in path))
