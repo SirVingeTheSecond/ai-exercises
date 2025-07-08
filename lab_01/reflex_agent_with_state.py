@@ -1,119 +1,115 @@
 """
-Homework 2 ▸ 4‑Square Reflex Agent with State
-=============================================
-Takeaways:
-    • *Model‑based reflex* ⇒ keeps **internal state** based on percept history
-    • Needs a **world model** (how env. evolves + effect of actions) -> handles partial observability
-    • Memory cost grows with |locations| (O(n) here) – still lightweight vs. table‑driven O(b^T)
-    • Emits **NoOp** once model believes *all four squares are clean* (goal reached)
+Homework 2 — Parametric Model‑Based Reflex Vacuum Agent (N‑square linear world)
+===============================================================================
+This agent maintains an **internal model** of every square’s cleanliness.
+Change the constants under CONFIG to adapt instantly to exam variants
+(e.g., different number of squares, new labels, pre‑clean squares).
+
+Key tweak points:
+    • SQUARES – ordered list of location labels.
+    • DIRTY_INIT – default external dirt status.
+    • STEPS – default simulation length.
+
+Policy overview:
+    1. Update internal `model` with current percept.
+    2. If current square dirty → "Suck".
+    3. Else if any square dirty → move one step toward *nearest* dirty square.
+    4. Else → "NoOp" (all clean).
+
+The helper `nearest_dirty()` makes the logic invariant to the number of squares.
 """
 
-# ── world constants ───────────────────────────────────────────────────────────
-A, B, C, D = 'A', 'B', 'C', 'D'        # 4‑location linear world
-VALID_ACTIONS = {'Suck', 'Left', 'Right', 'NoOp'}
+from typing import List, Dict, Tuple, Optional
 
-# ── environment (mutable) ─────────────────────────────────────────────────────
-Environment = {
-    A: 'Dirty',
-    B: 'Dirty',
-    C: 'Dirty',
-    D: 'Dirty',
-    'Current': A,                     # ← any starting square allowed
-}
+# ── CONFIG ─────────────────────────────────────────────────────────────────
+SQUARES: List[str] = ["A", "B", "C", "D"]  # <‑‑ Edit for different N / labels
+DIRTY_INIT: str = "Dirty"                      # default external dirt status
+STEPS: int = 20                                # default run length
+VALID_ACTIONS = {"Suck", "Left", "Right", "NoOp"}
 
-# ── internal agent memory ─────────────────────────────────────────────────────
-model = {A: None, B: None, C: None, D: None}  # tracks perceived cleanliness
-state  = None     # latest abstracted state
-action = None     # previous action
+# ── DERIVED LOOK‑UPS ──────────────────────────────────────────────────────
+INDEX: Dict[str, int] = {loc: i for i, loc in enumerate(SQUARES)}
 
-# ── rule base (condition -> rule‑id) & actions  ───────────────────────────────
-RULE_ACTION = {
-    1: 'Suck',     # clean current square
-    2: 'Right',    # move right
-    3: 'Left',     # move left
-    4: 'NoOp',     # do nothing (goal)
-}
+# ── ENVIRONMENT (mutable) ─────────────────────────────────────────────────
+Environment: Dict[str, str] = {loc: DIRTY_INIT for loc in SQUARES}
+Environment["Current"] = SQUARES[0]  # starting square (feel free to change)
 
-rules = {
-    # cleaning rules
-    (A, 'Dirty'): 1,
-    (B, 'Dirty'): 1,
-    (C, 'Dirty'): 1,
-    (D, 'Dirty'): 1,
+# ── I/O ────────────────────────────────────────────────────────────
 
-    # movement rules when location already clean
-    (A, 'Clean'): 2,
-    (B, 'Clean'): 2,
-    (C, 'Clean'): 2,
-    (D, 'Clean'): 3,
+def Sensors() -> Tuple[str, str]:
+    """Return (location, status)."""
+    loc = Environment["Current"]
+    return loc, Environment[loc]
 
-    # terminal condition (all clean)
-    (A, B, C, D, 'Clean'): 4,
-}
 
-# ── helper functions ──────────────────────────────────────────────────────────
+def Actuators(action: str) -> None:
+    """Safely mutate world for **valid** actions; ignore anything else."""
+    if action not in VALID_ACTIONS:
+        return
 
-def UPDATE_STATE(state, last_action, percept):
-    """Update *model* with newest percept, derive abstract *state*.
-    – Exam hook: combines **percept history** + **model of env.**
-    """
+    loc = Environment["Current"]
+    idx = INDEX[loc]
+
+    if action == "Suck":
+        Environment[loc] = "Clean"
+    elif action == "Right" and idx < len(SQUARES) - 1:
+        Environment["Current"] = SQUARES[idx + 1]
+    elif action == "Left" and idx > 0:
+        Environment["Current"] = SQUARES[idx - 1]
+    # "NoOp" leaves world unchanged.
+
+# ── AGENT INTERNAL MODEL & POLICY ─────────────────────────────────────────
+
+# Start with an *unknown* (assumed DIRTY_INIT) model.
+model: Dict[str, str] = {loc: DIRTY_INIT for loc in SQUARES}
+
+
+def nearest_dirty(cur_idx: int) -> Optional[int]:
+    """Return index of closest dirty square to *cur_idx*; None if all clean."""
+    dirty_indices = [i for i, loc in enumerate(SQUARES) if model[loc] == "Dirty"]
+    if not dirty_indices:
+        return None
+    return min(dirty_indices, key=lambda i: abs(i - cur_idx))
+
+
+def MODEL_BASED_AGENT(percept: Tuple[str, str]) -> str:
+    """Model‑based reflex agent parametric in **SQUARES** length."""
     loc, status = percept
-    model[loc] = status                 # remember cleanliness
 
-    # when model thinks every square clean ⇒ use special composite key
-    if all(model[l] == 'Clean' for l in (A, B, C, D)):
-        return (A, B, C, D, 'Clean')
+    # 1) Update internal model with current percept.
+    model[loc] = status
 
-    return percept                      # otherwise just use current percept
+    # 2) If current square dirty ⇒ Suck.
+    if status == "Dirty":
+        return "Suck"
 
+    # 3) Otherwise move toward nearest remaining dirty square.
+    idx = INDEX[loc]
+    target_idx = nearest_dirty(idx)
+    if target_idx is None:
+        return "NoOp"  # all squares clean
 
-def RULE_MATCH(state):
-    """Return rule‑id or None (missing rule ⇒ undefined)."""
-    return rules.get(tuple(state))
+    return "Right" if target_idx > idx else "Left"
 
+# ── SIMULATION DRIVER ─────────────────────────────────────────────────────
 
-def REFLEX_AGENT_WITH_STATE(percept):
-    """Model‑based reflex: uses UPDATE_STATE -> RULE_MATCH -> RULE_ACTION."""
-    global state, action
-    state  = UPDATE_STATE(state, action, percept)
-    rule   = RULE_MATCH(state)
-    action = RULE_ACTION.get(rule, 'NoOp')
-    return action
+def run(steps: int = STEPS) -> None:
+    """Run agent *steps* iterations and print a compact trace."""
+    hdr = "Current                         New     ModelDirty?"
+    sub = "loc      status  act   loc      status  remaining"
+    print(hdr)
+    print(sub)
 
-# ── sensor & actuator interface ──────────────────────────────────────────────
-
-def Sensors():
-    loc = Environment['Current']
-    return (loc, Environment[loc])
-
-
-def Actuators(act):
-    """Guard environment: ignore commands outside VALID_ACTIONS."""
-    if act not in VALID_ACTIONS:
-        return                           # bogus ⇒ no state change
-
-    loc = Environment['Current']
-    if act == 'Suck':
-        Environment[loc] = 'Clean'
-    elif act == 'Right' and loc in (A, B, C):
-        Environment['Current'] = {A: B, B: C, C: D}[loc]
-    elif act == 'Left'  and loc in (B, C, D):
-        Environment['Current'] = {B: A, C: B, D: C}[loc]
-    # NoOp leaves world untouched
-
-# ── simulation driver ────────────────────────────────────────────────────────
-
-def run(steps: int = 20):
-    print('    Current                        New')
-    print('location    status  action  location    status')
     for _ in range(steps):
-        (loc, st) = Sensors()
-        print(f'{loc:12}{st:8}', end='')
-        act = REFLEX_AGENT_WITH_STATE(Sensors())
+        loc, st = Sensors()
+        dirty_left = sum(1 for s in model.values() if s == "Dirty")
+        print(f"{loc:8}{st:8}", end="")
+        act = MODEL_BASED_AGENT(Sensors())
         Actuators(act)
-        (new_loc, new_st) = Sensors()
-        print(f'{act:8}{new_loc:12}{new_st:8}')
+        nloc, nst = Sensors()
+        print(f"{act:6}{nloc:8}{nst:8}{dirty_left:6}")
 
-# ── demo ─────────────────────────────────────────────────────────────────────
-if __name__ == '__main__':
-    run(20)  # expected: clean all squares then enter NoOp idle state
+
+# ── ENTRYPOINT ────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    run()
