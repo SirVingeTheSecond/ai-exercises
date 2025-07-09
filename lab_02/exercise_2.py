@@ -2,27 +2,27 @@
 Lab 02 ▸ Exercise 2 — Vacuum-World via Breadth-First Search
 ==========================================================
 Takeaways:
-    • State = (location, A-status, B-status) -> captures **everything** BFS needs
-    • Breadth-First Search ⇒ guarantees **shortest action sequence** (optimal cost = #moves)
+    • State = (location, A-status, B-status)
+    • Breadth-First Search ⇒ guarantees **shortest action sequence** (optimal cost = # of moves)
     • Explored-set prevents revisiting states |V| ≤ 8  (2 locs × 2^2 dirt configs)
-    • Successor fn embodies env. physics:  Suck / Move / NoOp   (exam favourite)
+    • Successor fn embodies env. physics:  Suck / Move / NoOp
 """
 
 # --- state-space ------------------------------------------------------------- #
-# Explicit enumeration keeps code short; 8 reachable states in 2-square world.
+# 8 reachable states in 2-square world.
 STATE_SPACE = {
     ('A', 'Dirty', 'Dirty'): [ ('A', 'Clean', 'Dirty'), ('B', 'Dirty', 'Dirty') ],
     ('A', 'Clean', 'Dirty'): [ ('B', 'Clean', 'Dirty') ],
     ('A', 'Dirty', 'Clean'): [ ('A', 'Clean', 'Clean'), ('B', 'Dirty', 'Clean') ],
-    ('A', 'Clean', 'Clean'): [ ('B', 'Clean', 'Clean') ],                # goal on A
+    ('A', 'Clean', 'Clean'): [ ('B', 'Clean', 'Clean') ],                       # goal on A
     ('B', 'Dirty', 'Dirty'): [ ('B', 'Dirty', 'Clean'), ('A', 'Dirty', 'Dirty') ],
     ('B', 'Clean', 'Dirty'): [ ('B', 'Clean', 'Clean'), ('A', 'Clean', 'Dirty') ],
     ('B', 'Dirty', 'Clean'): [ ('B', 'Clean', 'Clean'), ('A', 'Dirty', 'Clean') ],
-    ('B', 'Clean', 'Clean'): []                                           # goal on B
+    ('B', 'Clean', 'Clean'): []                                                 # goal on B
 }
 
-INITIAL_STATE = ('B', 'Dirty', 'Dirty')      # sample start
-GOAL_STATE    = ('A', 'Clean', 'Clean')      # desired end
+INITIAL_STATE = ('B', 'Dirty', 'Dirty')
+GOAL_STATE    = ('A', 'Clean', 'Clean')
 
 # --- node abstraction -------------------------------------------------------- #
 class Node:

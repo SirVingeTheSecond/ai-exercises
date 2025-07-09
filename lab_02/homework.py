@@ -1,68 +1,107 @@
 """
-Lab 02 ▸ Homework — Farmer, Wolf, Goat & Cabbage (BFS)
-======================================================
-Takeaways:
-    • State = (Farmer, Wolf, Goat, Cabbage)  each ∈ {W,E}  -> 2^4 = 16 combos
-    • Breadth-First Search guarantees **minimum crossings**
-    • `is_valid()` encodes safety constraints; successor_fn filters invalid moves
-    • Classic river-crossing shows **search + constraint checking** pattern
+Lecture 3 Lab ▸ Homework — Farmer, Wolf, Goat & Cabbage (BFS)
+============================================================================
+Exam tip: the puzzle often reappears with **different passengers or bank
+labels**. Change only the CONFIG block below; no other edits needed.
+
+CONFIG
+------------
+• BANKS......... side labels (default 'W'=west, 'E'=east)
+• ENTITIES...... ordered list; first MUST be the boat driver (e.g. Farmer)
+• INIT_STATE.... tuple of starting sides, len = len(ENTITIES)
+• GOAL_STATE.... where you want everyone to end up
+• UNSAFE_PAIRS.. list of tuples     (prey, predator)  – wrong alone together
+
+The algorithm auto‑builds successor moves and validity checks from these
+settings.
 """
+from collections import deque
+from typing import List, Tuple, Sequence
 
-# --- helpers ---------------------------------------------------------------- #
-def opposite(side):          # switch riverbank
-    return 'E' if side == 'W' else 'W'
+# ── CONFIG ─────────────────────────────────────────────────────────────────
+BANKS: Tuple[str, str] = ("W", "E")
+ENTITIES: Tuple[str, ...] = ("Farmer", "Wolf", "Goat", "Cabbage")
+INIT_STATE: Tuple[str, ...] = ("W", "W", "W", "W")
+GOAL_STATE: Tuple[str, ...] = ("E", "E", "E", "E")
+UNSAFE_PAIRS: List[Tuple[int, int]] = [  # indexes into ENTITIES
+    (1, 2),  # Wolf eats Goat
+    (2, 3),  # Goat eats Cabbage
+]
 
-def is_valid(state):
-    _, wolf, goat, cabbage = state
-    # Goat with wolf or cabbage without farmer ⇒ invalid
-    if wolf == goat and state[0] != goat:   return False
-    if goat == cabbage and state[0] != goat:return False
+# ── DERIVED FUNCTIONS ──────────────────────────────────────────────────────
+DRIVER_IDX: int = 0  # first entity must pilot the boat
+
+
+def opposite(side: str) -> str:
+    a, b = BANKS
+    return b if side == a else a
+
+
+def is_valid(state: Sequence[str]) -> bool:
+    """Return False if any unsafe pair is alone without the driver."""
+    driver_side = state[DRIVER_IDX]
+    for predator, prey in UNSAFE_PAIRS:
+        if state[predator] == state[prey] != driver_side:
+            return False
     return True
 
-def successor_fn(state):
-    """Generate legal successors (farmer alone or farmer+one)."""
-    farmer, wolf, goat, cabbage = state
-    moves = [
-        (opposite(farmer), wolf, goat, cabbage),                 # farmer only
-        (opposite(farmer), opposite(wolf), goat, cabbage)   if farmer==wolf    else None,
-        (opposite(farmer), wolf, opposite(goat), cabbage)   if farmer==goat    else None,
-        (opposite(farmer), wolf, goat, opposite(cabbage))  if farmer==cabbage else None
-    ]
-    return [s for s in moves if s and is_valid(s)]
 
-# --- BFS scaffolding -------------------------------------------------------- #
-INITIAL_STATE, GOAL_STATE = ('W','W','W','W'), ('E','E','E','E')
+def successor_fn(state: Tuple[str, ...]) -> List[Tuple[str, ...]]:
+    """Generate all legal successor states (driver alone or driver + one)."""
+    succ: List[Tuple[str, ...]] = []
+    driver_side = state[DRIVER_IDX]
+    # Move driver alone
+    candidate = list(state)
+    candidate[DRIVER_IDX] = opposite(driver_side)
+    if is_valid(candidate):
+        succ.append(tuple(candidate))
+    # Move driver + each passenger on same side
+    for idx, side in enumerate(state):
+        if idx == DRIVER_IDX or side != driver_side:
+            continue
+        candidate2 = list(candidate)  # start from driver‑moved version
+        candidate2[idx] = opposite(side)
+        if is_valid(candidate2):
+            succ.append(tuple(candidate2))
+    return succ
 
+# ── BFS ENGINE ─────────────────────────────────────────────────────────────
 class Node:
-    def __init__(self, state, parent=None, depth=0):
-        self.STATE, self.PARENT_NODE, self.DEPTH = state, parent, depth
-    def path(self):
-        n,p=self,[];
-        while n: p.append(n); n=n.PARENT_NODE
-        return p[::-1]
-    def __repr__(self): return f"{self.STATE}"
+    __slots__ = ("state", "parent")
 
-def INSERT(n,q): q.append(n); return q            # BFS rear-insert
+    def __init__(self, state: Tuple[str, ...], parent: "Node | None" = None):
+        self.state, self.parent = state, parent
 
-def INSERT_ALL(ns,q): q.extend(ns); return q
+    def path(self) -> List[Tuple[str, ...]]:
+        out, n = [], self
+        while n:
+            out.append(n.state)
+            n = n.parent
+        return out[::-1]
 
-def REMOVE_FIRST(q): return q.pop(0)
 
-def EXPAND(node):
-    return [Node(s,node,node.DEPTH+1) for s in successor_fn(node.STATE)]
-
-def TREE_SEARCH():
-    fringe, explored = INSERT(Node(INITIAL_STATE), []), set()
+def bfs() -> List[Tuple[str, ...]] | None:
+    fringe: deque[Node] = deque([Node(INIT_STATE)])
+    explored: set[Tuple[str, ...]] = set()
     while fringe:
-        node = REMOVE_FIRST(fringe)
-        if node.STATE == GOAL_STATE: return node.path()
-        if node.STATE not in explored:
-            explored.add(node.STATE)
-            INSERT_ALL(EXPAND(node), fringe)
+        node = fringe.popleft()
+        if node.state == GOAL_STATE:
+            return node.path()
+        if node.state in explored:
+            continue
+        explored.add(node.state)
+        for s in successor_fn(node.state):
+            if s not in explored:
+                fringe.append(Node(s, node))
     return None
 
-# --- demo ------------------------------------------------------------------- #
+
+# ── DEMO RUN ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    path = TREE_SEARCH()
-    print("Solution path:\n",
-          " -> ".join(str(n.STATE) for n in path) if path else "No solution")
+    sol = bfs()
+    if sol:
+        for step, st in enumerate(sol):
+            print(f"{step:2}: {st}")
+        print("\nMoves:", len(sol) - 1)
+    else:
+        print("No solution found.")

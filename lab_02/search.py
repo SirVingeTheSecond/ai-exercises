@@ -4,7 +4,7 @@ Lab 02 ▸ Exercise 1 — Uninformed Search Fringe Order
 Takeaways:
     • **Front‑insert ➜ LIFO ➜ Depth‑First Search**  (stack behaviour)
     • **Rear‑insert  ➜ FIFO ➜ Breadth‑First Search** (queue behaviour)
-    • Fringe trace reveals node‑expansion order — classic exam trick.
+    • Fringe trace reveals node‑expansion order
     • State‑space size small ⇒ manual tracing feasible.
 """
 
@@ -19,7 +19,7 @@ STATE_SPACE = {
 INITIAL_STATE, GOAL_STATE = 'A', 'J'
 
 # -------- search control toggle --------------------------------------------
-STRATEGY = 'DFS'  # set to 'BFS' to switch behaviour
+STRATEGY = 'BFS'  # set to 'BFS' to switch behaviour
 
 # -------- node ----------------------------------------------------------------
 class Node:
