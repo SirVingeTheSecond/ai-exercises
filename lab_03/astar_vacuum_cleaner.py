@@ -5,13 +5,13 @@ Takeaways:
     • **A*** search ⇒ f(n)=g+h finds *optimal* (shortest‑move) plan when h is admissible.
     • State = (location, A,B,C,D status) ⇒ |S| = 4×2⁴ = 64  (tractable graph).
     • Heuristic = count_dirty_squares -> never over‑estimates ⇒ admissible & consistent.
-    • Outputs: *path*, *total cost* (moves), *nodes expanded* — classic exam metrics.
+    • Outputs: *path*, *total cost* (moves), *nodes expanded*
 """
 
 import heapq
 from typing import List, Tuple
 
-# ── generic A* scaffolding ─────────────────────────────────────────────────── #
+# ── generic A* ─────────────────────────────────────────────────── #
 class Node:
     """Lightweight search tree node (keeps only what BFS/A* needs)"""
 
@@ -20,7 +20,7 @@ class Node:
     def __init__(self, state: Tuple, path: List[str], g: int):
         self.state, self.path, self.g = state, path, g  # g ≡ path‑cost so far
 
-    # Priority queue compares on f(n)=g+h; we compute on‑the‑fly for speed
+    # Priority queue compares on f(n)=g+h
     def __lt__(self, other: "Node"):
         return False  # tie‑break handled by heap tuple (f,this)
 
