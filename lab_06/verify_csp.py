@@ -1,8 +1,9 @@
 from csp_south_america import create_sa_csp
+
 csp = create_sa_csp()
 solution = csp.backtracking_search(forward_check=True, use_ac3=True)
 
-# quick check
+# check
 assert all(
     solution[A] != solution[B]
     for A in csp.N

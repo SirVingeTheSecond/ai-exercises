@@ -1,5 +1,5 @@
 """
-Lab 06 ▸ Homework & Challenge — South-America Map-Colouring CSP
+Lab 06 ▸ Homework & Challenge - South-America Map-Colouring CSP
 ==============================================================
 Run:
     python csp_south_america.py                 # plain backtracking
@@ -16,7 +16,7 @@ countries = [
     "French_Guiana", "Falkland_Islands", "Sur_round"   # dummy to keep 15 vars
 ]
 
-colours = ["R", "G", "B", "Y"]  # four-colour theorem
+colours = ["R", "G", "B", "Y"]
 
 neigh = {
     "Argentina": ["Bolivia", "Brazil", "Chile", "Paraguay", "Uruguay"],

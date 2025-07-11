@@ -1,11 +1,11 @@
 """
-Lab 06 ▸ Exercise 1 — Backtracking CSP Solver
+Lab 06 ▸ Exercise 1 - Backtracking CSP Solver
 =====================================================
 Takeaways:
-    • Recursive-Backtracking (RT Fig 6-5)  -> DFS in assignment space.
+    • Recursive-Backtracking (RT Fig 6-5) -> DFS in assignment space.
     • **MRV** picks the variable with the fewest remaining values.
     • **LCV** orders values least-constraining-first.
-    • Optional **Forward-Checking** & **AC-3** (switches for Challenge).
+    • Optional **Forward-Checking** & **AC-3**
 """
 
 from __future__ import annotations
